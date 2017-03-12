@@ -5,7 +5,6 @@ dbconn_announce();
 
 $sqlLink = old_get_mysql_link();
 $row = null;
-$row = null;
 
 function Notice($err) {
   // TODO:
@@ -20,6 +19,10 @@ function getParam($name) {
 function esc($str) {
   global $sqlLink;
   return $sqlLink->real_escape_string($str);
+}
+
+function hex_esc($matches) {
+  return sprintf('%02x', ord($matches[0]));
 }
 
 $info = [
@@ -42,10 +45,15 @@ $info = [
 
   'ts' => time(),
 ];
+
+$info['hash'] = preg_replace_callback('/./s', 'hex_esc', hash_pad($info['infohash']));
+
 $peerid = esc($info['peerid']);
+$infohash = esc($info['infohash']);
 
 $numwant = max(intval(getParam('numwant')), intval(getParam('num_want')), 0); 
 $info['numwant'] = min($numwant ? $numwant : 16, 16);
+
 
 // TODO: get Torrent Info from pathname
 
@@ -64,8 +72,10 @@ if (strlen($info['passkey']) != 32) Notice('Invalid "passkey"');
 if ($info['port'] <= 0 || $info['port'] > 0xffff) Notice('Invalid "port"');
 
 
+// validate torrent-user info
+// TODO: snatch table info
+
 // validate passkey
-// TODO: use new table
 // get user info
 if (!$row = $Cache->get_value('tracker_user_' .$info['passkey'] .'_content')) {
   $res = $sqlLink->query("SELECT id, downloadpos, enabled, uploaded, downloaded, class, parked, clientselect, showclienterror FROM users WHERE passkey='". esc($info['passkey'])."' LIMIT 0, 1")
@@ -98,7 +108,6 @@ $client_familyid = check_client_family($info['peerid'], $info['agent'], $clichec
 if ($clicheck_res || !$client_familyid) {
   if ($row['showclienterror'] == 'no') {
     // TODO: record invalid client version
-    // TODO: handle error
     $sqlLink->query("UPDATE users SET showclienterror = 'yes' WHERE id = '$user[id]'")
       or Notice('Error: 0x1001');
   }
@@ -110,11 +119,11 @@ if ($clicheck_res || !$client_familyid) {
 // validate torrent
 // get torrent info
 
-if (!$row = $Cache->get_value('tracker_hash_' .$info['infohash'] .'_content')) {
-  $res = $sqlLink->query("SELECT id, owner, sp_state, seeders, leechers, UNIX_TIMESTAMP(added) AS added, banned, timestampdiff(DAY, last_action, NOW()) as diff_action_day FROM torrents WHERE info_hash = '$info[infohash]' LIMIT 0, 1")
+if (1 || !$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) {
+  $res = $sqlLink->query("SELECT id, owner, sp_state, seeders, leechers, UNIX_TIMESTAMP(added) AS added, banned, timestampdiff(DAY, last_action, NOW()) as diff_action_day FROM torrents WHERE info_hash = '$infohash' LIMIT 0,1")
     or Notice('Error: 0x0004');
   $row = $res->fetch_assoc();
-  $Cache->cache_value('tracker_hash_' .$info['infohash'] .'_content', $row, 1870);
+  $Cache->cache_value('tracker_hash_' .$info['hash'] .'_content', $row, 1870);
 }
 
 if (!$row) {
@@ -130,7 +139,7 @@ if ($torrent['banned'] && $user['class'] < $seebanned_class && $torrent['owner']
 
 // evalute wait time
 // TODO:
-$announce_wait = 300;
+$announce_wait = 30;
 $real_annnounce_interval = $announce_interval;
 if ($anninterthreeage && ($anninterthree > $announce_wait) && (TIMENOW - $torrent['added']) >= ($anninterthreeage * 86400))
   $real_annnounce_interval = $anninterthree;
@@ -189,7 +198,7 @@ $body = [
 // get peer list
 
 $res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' " 
-  .($seeder ? "AND seeder = 'no' " : '')
+  .($seeder ? "AND seeder = 0 " : '')
   ."ORDER BY RAND() LIMIT 0, $info[numwant]")
   or Notice('Error: 0x0008');
 
@@ -223,11 +232,6 @@ else
 // TODO: check user level
 $body[] = $peerInfo;
 
-// TODO:snatch
-
-
-// TODO: true uploaded and downloaded <-- report
-
 
 // update peer
 $dt = esc(date('Y-m-d H:i:s', $info['ts']));
@@ -245,13 +249,12 @@ if ($self) {
   $where = "torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id = '$peerid'";
 
   // NOTE: don't update torrent info
-  if ($info['event'] == 'completed') { // complete: delete peer, update seeder/leecher
+  if ($info['event'] == 'complete') { // complete: update seeder status
     // TODO
-    $updates[] = "seeder = '" .($seeder ? 'yes' : 'no') ."'";
-    $updates[] = "finishedat = '$dt'";
+    $updates[] = "seeder = '$seeder'";
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1002');
-  } elseif ($info['event'] == 'stop') {
+  } elseif ($info['event'] == 'stop') { // stop: delete peer
     // TODO
     $sqlLink->query("DELETE FROM tracker_peers WHERE $where")
       or Notice('Error: 0x2001');
@@ -281,8 +284,6 @@ if ($self) {
     'downloadoffset',
     'togo',
     'seeder',
-    'startedat',
-    'finishedat',
     'last_action',
     'prev_action',
   ];
@@ -300,9 +301,7 @@ if ($self) {
     $info['uploaded'],
     $info['downloaded'],
     $info['left'],
-    $seeder ? 'yes' : 'no',
-    $dt,
-    $dt,
+    $seeder,
     $dt,
     $dt,
   ];
@@ -311,30 +310,82 @@ if ($self) {
     or Notice('Error: 0x000a');
 }
 
+// calculate upload and download traffic and time <-- report
+$upReport = $info['uploaded'] - $self['uploaded'];
+$downReport = $info['downloaded'] - $self['downloaded'];
+// TODO: if < 0, report abnormality
+$upTraffic = $self ? max(0, $upReport) : $info['uploaded'];
+$downTraffic = $self ? max(0, $downReport) : $info['downloaded'];
+$timeTraffic = $self ? max(TIMENOW - $self['last_action'], 0) : 0;
+
+$fields = [
+  'torrent',
+  'userid',
+  'peer_id',
+  'port',
+  'during',
+  'upload',
+  'download',
+  'seeder',
+];
+
+$values = [
+  $torrent['id'],
+  $user['id'],
+  $peerid,
+  $info['port'],
+  $timeTraffic,
+  $upTraffic,
+  $downTraffic,
+  $seeder,
+];
+
+$table = 'tracker_traffic';
+if (!$downTraffic && !$upTraffic)
+  $table .= '_null';
+
+$sqlLink->query("INSERT INTO $table (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
+  or Notice('Error: 0x000b');
+
+
+// update snatch
+$updates = [];
+$where = " WHERE torrent = '$torrent[id]' AND userid = '$user[id]'";
+
+$updates[] = "uploaded = uploaded + $upTraffic";
+$updates[] = "downloaded = downloaded + $downTraffic";
+$updates[] = ($seeder && !$downTraffic) ? "seedtime = seedtime + $timeTraffic" : "leechtime = leechtime + $timeTraffic";
+
+if ($info['event'] == 'complete') {
+  $updates[] = "finish_times = finish_times + 1";
+  $updates[] = "finishdat = '$dt'";
+}
+$sqlLink->query("UPDATE tracker_snatch SET " .join(',', $updates) .$where)
+  or Notice('Error: 0x1009');
+
 
 // update torrent
+// NOTE: update torrent seeders/leechers when crontab job
 if ($seeder) {
   $updates = [
     "visible = 'yes'",
     "last_action = '$dt'",
   ];
-  $sqlLink->query("UPDATE torrents SET " .join(',', $updates) . " WHERE id = '$torrent[id]'")
+  $sqlLink->query("UPDATE torrents SET " .join(',', $updates) ." WHERE id = '$torrent[id]'")
     or Notice('Error: 0x1005');
 
   // generator tag
   
   if ($torrent['diff_action_day'] > 100)
     $sqlLink->query("INSERT INTO sitelog (added, txt, security_level) VALUES('$dt', 'Torrent $torrent[id] added BUMP tag. The seeder (User $user[id]) exists after $torrent[diff_action_day] days.', 'mod')")
-      or Notice('Error: 0x000b');
+      or Notice('Error: 0x000c');
 }
 
 
-// update peer
-
-
 // update user
+// NOTE: not update user seed/leech time and query sum from `snatch` table.
 if ($client_familyid != 0 && $client_familyid != $user['clientselect'])
-  $userUpdateSet[] = "clientselect = ".sqlesc($client_familyid);
+  $userUpdateSet[] = "clientselect = '$client_familyid'";
 
 if ($seeder)
   $userUpdateSet[] = "last_access = '$dt'";
@@ -348,3 +399,4 @@ if (isset($userUpdateSet) && count($userUpdateSet) > 0) {
 
 benc_resp_raw('d' .join('', $body) .'e');
 exit();
+/* END */
