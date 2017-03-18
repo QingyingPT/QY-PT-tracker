@@ -61,7 +61,7 @@ if ($passkey) {
 if (!$user['passkey'] || strlen($user['passkey']) != 32) {
   $passkey = md5($user['username'] .date('c') .$user['passhash']);
   $sqlLink->query("UPDATE users SET passkey='" .esc($passkey) ."' WHERE id='$user[id]'")
-    or Notice('Error passkey');
+    or Notice('SQL error: Duplicate passkey');
 } else {
   $passkey = $user['passkey'];
 }
@@ -145,7 +145,7 @@ if ($res->num_rows == 0) {
 
 // bencode
 $dict = bdec_file($fn, $max_torrent_size);
-$dict['value']['announce']['value'] = $ssl_torrent . $base_announce_url . "?passkey=$user[passkey]&key=$key";
+$dict['value']['announce']['value'] = $ssl_torrent . $base_announce_url . "?passkey=$user[passkey]&downloadkey=$key";
 $dict['value']['announce']['string'] = strlen($dict['value']['announce']['value']).":".$dict['value']['announce']['value'];
 $dict['value']['announce']['strlen'] = strlen($dict['value']['announce']['string']);
 
