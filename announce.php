@@ -375,12 +375,16 @@ $sqlLink->query("UPDATE tracker_snatch SET " .join(',', $updates) ." WHERE id=$s
 
 
 // update torrent
-// NOTE: update torrent seeders/leechers when crontab job
 if ($seeder) {
   $updates = [
     "visible = 'yes'",
     "last_action = '$dt'",
   ];
+
+  if ($info['event'] == 'complete') {
+    $updates[] = 'times_completed = times_completed + 1';
+  }
+
   $sqlLink->query("UPDATE torrents SET " .join(',', $updates) ." WHERE id = '$torrent[id]'")
     or Notice('Error: 0x1005');
 

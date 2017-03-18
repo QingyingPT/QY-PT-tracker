@@ -128,7 +128,7 @@ $res = $sqlLink->query("SELECT * FROM tracker_snatch WHERE torrent = '$torrent[i
   or Notice('SQL error 3');
 
 if ($res->num_rows == 0) {
-  $key = md5($user['passhash'] .date('c') .rand());
+  $key = md5($user['passhash'] .$user['id'] .$torrent['id'] .date('c') .rand());
   $sqlLink->query("INSERT INTO tracker_snatch (torrent, userid, downloadkey, finishdat) VALUES ('$torrent[id]', '$user[id]', '$key', 0)")
     or Notice('SQL error 4');
 } else if ($res->num_rows > 1) {
