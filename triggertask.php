@@ -1,4 +1,8 @@
 <?php
+require_once 'autoload.php';
+
+use Tracker\Task;
+
 require_once('include/bittorrent_announce.php');
 dbconn_announce();
 
@@ -9,16 +13,13 @@ function esc($str) {
   return $sqlLink->real_escape_string($str);
 }
 
-
-require('./task.php');
-
 ob_flush();
 flush();
 
 $stt = microtime(true);
 print("start timing task...\n");
 
-doClean();
+Task::start();
 
 $end = microtime(true);
 print("end timing tasks\n");

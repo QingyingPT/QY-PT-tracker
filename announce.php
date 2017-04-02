@@ -1,4 +1,8 @@
 <?php
+
+include 'Tracker/Config.php';
+use Tracker\Config;
+
 require_once('include/bittorrent_announce.php');
 require_once('include/benc.php');
 dbconn_announce();
@@ -19,10 +23,6 @@ function getParam($name) {
 function esc($str) {
   global $sqlLink;
   return $sqlLink->real_escape_string($str);
-}
-
-function hex_esc($matches) {
-  return sprintf('%02x', ord($matches[0]));
 }
 
 $info = [
@@ -47,7 +47,9 @@ $info = [
   'ts' => time(),
 ];
 
-$info['hash'] = preg_replace_callback('/./s', 'hex_esc', hash_pad($info['infohash']));
+$info['hash'] = preg_replace_callback('/./s', function ($matches) {
+  return sprintf('%02x', ord($matches[0]));
+}, hash_pad($info['infohash']));
 
 $peerid = esc($info['peerid']);
 $infohash = esc($info['infohash']);
@@ -113,7 +115,7 @@ if ($clicheck_res || !$client_familyid) {
 
 // validate torrent
 // get torrent info
-
+// TODO
 if (1 || !$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) {
   $res = $sqlLink->query("SELECT id, owner, sp_state, seeders, leechers, UNIX_TIMESTAMP(added) AS added, banned, timestampdiff(DAY, last_action, NOW()) as diff_action_day FROM torrents WHERE info_hash = '$infohash' LIMIT 0,1")
     or Notice('Error: 0x0004');
@@ -149,14 +151,19 @@ if (!$row = $Cache->get_value("tracker_snatch_$torrent[id]_$user[id]_content")) 
 
 $snatch = $row;
 
-// evalute wait time
-// TODO:
-$announce_wait = 30;
-$real_annnounce_interval = $announce_interval;
-if ($anninterthreeage && ($anninterthree > $announce_wait) && (TIMENOW - $torrent['added']) >= ($anninterthreeage * 86400))
-  $real_annnounce_interval = $anninterthree;
-elseif ($annintertwoage && ($annintertwo > $announce_wait) && (TIMENOW - $torrent['added']) >= ($annintertwoage * 86400))
-  $real_annnounce_interval = $annintertwo;
+// evalute interval time
+$annIntervals = Tracker\Config::$annIntervals;
+$annThreshold = Tracker\Config::$annIntervalsThreshold;
+
+$annInterval = $annIntervals[0];
+if ((TIMENOW - $torrent['added']) >= $annThreshold[1]) {
+  $realAnnInterval = $annIntervals[2];
+} else if ((TIMENOW - $torrent['added']) < $annThreshold[0]) {
+  $realAnnInterval = $annIntervals[0];
+} else {
+  $realAnnInterval = $annIntervals[1];
+}
+
 
 // get peer info
 
@@ -186,8 +193,8 @@ $self = $res ? $res->fetch_assoc() : false;
 
 // validate interval time
 
-if ($self && $self['prev_action'] > (TIMENOW - $announce_wait))
-  Notice('There is a minimum announce time of ' .$announce_wait .' seconds');
+if ($self && $self['prev_action'] > (TIMENOW - $annInterval))
+  Notice("There is a minimum announce time of $annInterval seconds");
 
 // validate leech and seed limit
 $res = $sqlLink->query("SELECT COUNT(*) FROM tracker_peers WHERE torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id != '$peerid'")
@@ -201,8 +208,8 @@ if ($num > 2 && $seeder)
 // basic info
 
 $body = [
-  benc_str('interval') .'i' .$real_annnounce_interval .'e',
-  benc_str('min interval') .'i' .$announce_wait .'e',
+  benc_str('interval') .'i' .$realAnnInterval .'e',
+  benc_str('min interval') .'i' .$annInterval .'e',
   benc_str('complete') .'i' .$torrent['seeders'] .'e',
   benc_str('incomplete') .'i' .$torrent['leechers'] .'e',
 ];
@@ -329,34 +336,57 @@ $upTraffic = $self ? max(0, $upReport) : $info['uploaded'];
 $downTraffic = $self ? max(0, $downReport) : $info['downloaded'];
 $timeTraffic = $self ? max(TIMENOW - $self['last_action'], 0) : 0;
 
-$fields = [
-  'torrent',
-  'userid',
-  'peer_id',
-  'port',
-  'during',
-  'upload',
-  'download',
-  'seeder',
-];
+if ($downTraffic || $upTraffic) {
+  $fields = [
+    'torrent',
+    'userid',
+    'peer_id',
+    'port',
+    'during',
+    'up',
+    'dl',
+    'rest_up',
+    'rest_dl',
+    'seeder',
+  ];
 
-$values = [
-  $torrent['id'],
-  $user['id'],
-  $peerid,
-  $info['port'],
-  $timeTraffic,
-  $upTraffic,
-  $downTraffic,
-  $seeder,
-];
+  $values = [
+    $torrent['id'],
+    $user['id'],
+    $peerid,
+    $info['port'],
+    $timeTraffic,
+    $upTraffic,
+    $downTraffic,
+    $upTraffic,
+    $downTraffic,
+    $seeder,
+  ];
 
-$table = 'tracker_traffic';
-if (!$downTraffic && !$upTraffic)
-  $table .= '_null';
+  $sqlLink->query("INSERT INTO tracker_traffic (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
+    or Notice('Error: 0x000b');
+} else {
+  $fields = [
+    'torrent',
+    'userid',
+    'peer_id',
+    'port',
+    'during',
+    'seeder',
+  ];
 
-$sqlLink->query("INSERT INTO $table (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
-  or Notice('Error: 0x000b');
+  $values = [
+    $torrent['id'],
+    $user['id'],
+    $peerid,
+    $info['port'],
+    $timeTraffic,
+    $seeder,
+  ];
+
+  $sqlLink->query("INSERT INTO tracker_traffic_null (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
+    or Notice('Error: 0x000b');
+}
 
 
 // update snatch
