@@ -39,6 +39,7 @@ function updateTorrentInfo() {
 function dotask($name, $flag, $info, $func) {
   if ($flag) {
     print("\n$info ...\n");
+    $timeStart = microtime(true);
 
     $result = $func() ? : 'DONE';
 
@@ -46,7 +47,9 @@ function dotask($name, $flag, $info, $func) {
     $sqlLink->query("UPDATE tracker_schedule SET last_action = CURRENT_TIMESTAMP WHERE name = '$flag'")
       or SQLError(__FILE__, __LINE__);
 
-    print("\n$info ... $result\n");
+    $time = round((microtime(true) - $timeStart) * 1000);
+
+    print("\n\"$info\" use $time ms. Result: $result\n");
 
     ob_flush();
     flush();
