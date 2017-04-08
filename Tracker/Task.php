@@ -49,7 +49,7 @@ function dotask($name, $flag, $info, $func) {
 
     $time = round((microtime(true) - $timeStart) * 1000);
 
-    print("\n\"$info\" use $time ms. Result: $result\n");
+    print("\n$info use $time ms. result: $result\n");
 
     ob_flush();
     flush();
