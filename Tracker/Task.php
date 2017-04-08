@@ -1,21 +1,12 @@
 <?php namespace Tracker;
 
+use Tracker\SQL;
 use Tracker\Config;
 use Tracker\Task\UpdatePeers;
 use Tracker\Task\UpdateTorrent;
 use Tracker\Task\ProcessTraffic;
 
-class Task {
-  private $sql = NULL;
-
-  function __construct() {
-    $this->sql = old_get_mysql_link();
-  }
-
-  function throwSQLError($err) {
-    throw new \RuntimeException($err . "\n SQL Error [" . $this->sql->errno . "]: " . $this->sql->error);
-  }
-
+class Task extends SQL {
   function dotask ($name, $flag, $info, $func) {
     if ($flag) {
       print("\n$info ...\n");

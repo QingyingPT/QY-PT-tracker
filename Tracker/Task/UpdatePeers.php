@@ -1,16 +1,8 @@
 <?php namespace Tracker\Task;
 
-class UpdatePeers {
-  private $sql = NULL;
+use Tracker\SQL;
 
-  function __construct () {
-    $this->sql = old_get_mysql_link();
-  }
-
-  function throwSQLError($err) {
-    throw new \RuntimeException($err . "\n SQL Error [" . $this->sql->errno . "]: " . $this->sql->error);
-  }
-
+class UpdatePeers extends SQL {
   function cleanOldPeers($difftime) {
     $dt = esc(date('Y-m-d H:i:s', TIMENOW - $difftime));
 

@@ -3,10 +3,11 @@
 // TODO: log abnormal traffic
 // TODO: avoid update statement too long. limit 30/time
 
+use Tracker\SQL;
 use Tracker\Config;
 use Tracker\Exception\Normal as NormalException;
 
-class ProcessTraffic {
+class ProcessTraffic extends SQL {
   static $queryfields = [
     'id',
     'torrent',
@@ -19,8 +20,6 @@ class ProcessTraffic {
     // 'seeder',
     // 'last_action',
   ];
-
-  private $sql = NULL;
 
   static function statisticUser($traffic, $userUp, $userDl, &$users) {
     if (!isset($users[$userUp])) {
@@ -83,10 +82,6 @@ class ProcessTraffic {
   static function formula ($up, $dl, $n) {
     // TODO: bonus formula
     return 100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n)));
-  }
-
-  function __construct() {
-    $this->sql = old_get_mysql_link();
   }
 
   function updateBucket(&$bucket) {
@@ -203,9 +198,5 @@ class ProcessTraffic {
     $this->updateUser($usersUpdateSet);
 
     return 'DONE';
-  }
-
-  function throwSQLError($err) {
-    throw new \RuntimeException($err . "\n SQL Error [" . $this->sql->errno . "]: " . $this->sql->error);
   }
 }
