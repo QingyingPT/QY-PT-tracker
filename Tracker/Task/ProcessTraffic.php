@@ -1,6 +1,5 @@
 <?php namespace Tracker\Task;
 // TODO: validate traffic
-// TODO: update user data
 // TODO: log abnormal traffic
 // TODO: avoid update statement too long. limit 30/time
 
@@ -42,7 +41,6 @@ class ProcessTraffic {
     } else {
       $users[$userDl]['dl'] += $traffic;
     }
-    
   }
 
   static function balanceTraffic(&$bucketUp, &$bucketDl, &$users) {
@@ -56,6 +54,10 @@ class ProcessTraffic {
     while ($i < $leup && $j < $ledl) {
       $restUp += $bucketUp[$i]['up'];
       $restDl += $bucketDl[$j]['dl'];
+      $bu = $bucketUp[$i];
+      $bd = $bucketDl[$j];
+      // print "$i $bu[id] $j $bd[id] $bu[up] $bd[dl] $restDl $restUp \n";
+
       if ($restUp < $restDl) {
         $bucketUp[$i]['up'] = 0;
         $bucketDl[$j]['dl'] = $restDl - $restUp;

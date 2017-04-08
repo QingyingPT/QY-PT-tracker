@@ -19,9 +19,10 @@ flush();
 $stt = microtime(true);
 print("start timing task...\n");
 
-Task::start();
+$task = new Task();
+$task->start();
 
 $end = microtime(true);
-print("end timing tasks\n");
+print("\nend timing tasks\n");
 
 exit();
