@@ -97,19 +97,34 @@ if ($user['enabled'] == 'no')
 if ($user['downloadpos'] == 'no')
   Notice('Download priviledge is disabled!');
 
+// validate HP
+if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content')) {
+  $res = $sqlLink->query("SELECT bonus FROM tracker_bonus WHERE id = '$user[id]' LIMIT 0,1")
+    or Notice('Error: 0x0001');
+  $row = $res->fetch_assoc();
+  if (!$row) {
+    Notice('Error: 0x0001');
+  }
+  $Cache->cache_value('tracker_userbonus_' .$info['passkey'] .'_content', $row, 1950);
+}
+
+if ($row['bonus'] < 0) {
+  Notice('You run up all HP.');
+}
+
 // validate client
 // TODO: new method
 $clicheck_res = check_client($info['peerid'], $info['agent']);
 $client_familyid = check_client_family($info['peerid'], $info['agent'], $clicheck_res);
 
 if ($clicheck_res || !$client_familyid) {
-  if ($row['showclienterror'] == 'no') {
+  if ($user['showclienterror'] == 'no') {
     // TODO: record invalid client version
     $sqlLink->query("UPDATE users SET showclienterror = 'yes' WHERE id = '$user[id]'")
       or Notice('Error: 0x1001');
   }
   Notice($clicheck_res);
-} elseif ($row['showclienterror'] == 'yes') {
+} elseif ($user['showclienterror'] == 'yes') {
   $userUpdateSet[] = "showclienterror = 'no'";
 }
 

@@ -1,3 +1,4 @@
+*.sw[apo]
 config
 *config.php
 classes

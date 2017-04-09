@@ -5,14 +5,18 @@
 
 use Tracker\SQL;
 use Tracker\Config;
+use Tracker\SQLTrait;
 use Tracker\Exception\Normal as NormalException;
 
 class ProcessTraffic extends SQL {
+  use SQLTrait;
+
   static $queryfields = [
     'id',
     'torrent',
     'userid',
     'during',
+    'seeder',
     'rest_up as up',
     'rest_dl as dl',
     'rest_up',
@@ -21,24 +25,35 @@ class ProcessTraffic extends SQL {
     // 'last_action',
   ];
 
-  static function statisticUser($traffic, $userUp, $userDl, &$users) {
-    if (!isset($users[$userUp])) {
-      $users[$userUp] =  [
-        'id' => $userUp,
-        'up' => $traffic,
-        'dl' => 0,
-      ];
-    } else {
-      $users[$userUp]['up'] += $traffic;
-    }
-    if (!isset($users[$userDl])) {
-      $users[$userDl] =  [
-        'id' => $userDl,
+  static function defineUser ($uid, &$users, $cb = NULL) {
+    if (!isset($users[$uid])) {
+      $users[$uid] = [
+        'id' => $uid,
         'up' => 0,
-        'dl' => $traffic,
+        'dl' => 0,
+        'seed' => 0,
+        'leech' => 0,
       ];
-    } else {
-      $users[$userDl]['dl'] += $traffic;
+    }
+
+    if ($cb) $cb($users[$uid]);
+  }
+
+  static function accUserTraffic ($traffic, $userUp, $userDl, &$users) {
+    static::defineUser($userUp, $users, function (&$user) use ($traffic) {
+      $user['up'] += $traffic;
+    });
+
+    static::defineUser($userDl, $users, function (&$user) use ($traffic) {
+      $user['dl'] += $traffic;
+    });
+  }
+
+  static function accUserDuring($flag, $during, $uid, &$users) {
+    if ($during > 0) {
+      static::defineUser($uid, $users, function (&$user) use ($flag, $during) {
+        $user[$flag] += $during;
+      });
     }
   }
 
@@ -57,11 +72,18 @@ class ProcessTraffic extends SQL {
       $bd = $bucketDl[$j];
       // print "$i $bu[id] $j $bd[id] $bu[up] $bd[dl] $restDl $restUp \n";
 
+      if ($bucketUp[$i]['seeder'] != false) {
+        static::accUserDuring('seed', $bucketUp[$i]['during'], $bucketUp[$i]['userid'], $users);
+        $bucketUp[$i]['during'] = 0;
+      }
+      static::accUserDuring('leech', $bucketDl[$j]['during'], $bucketDl[$j]['userid'], $users);
+      $bucketDl[$j]['during'] = 0;
+
       if ($restUp < $restDl) {
         $bucketUp[$i]['up'] = 0;
         $bucketDl[$j]['dl'] = $restDl - $restUp;
 
-        static::statisticUser($restUp, $bucketUp[$i]['userid'], $bucketDl[$j]['userid'], $users);
+        static::accUserTraffic($restUp, $bucketUp[$i]['userid'], $bucketDl[$j]['userid'], $users);
 
         $restDl -= $restUp + $bucketDl[$j]['dl'];
         $restUp = 0;
@@ -70,7 +92,7 @@ class ProcessTraffic extends SQL {
         $bucketUp[$i]['up'] = $restUp - $restDl;
         $bucketDl[$j]['dl'] = 0;
 
-        static::statisticUser($restDl, $bucketUp[$i]['userid'], $bucketDl[$j]['userid'], $users);
+        static::accUserTraffic($restDl, $bucketUp[$i]['userid'], $bucketDl[$j]['userid'], $users);
 
         $restUp -= $restDl + $bucketUp[$i]['up'];
         $restDl = 0;
@@ -81,9 +103,10 @@ class ProcessTraffic extends SQL {
 
   static function formula ($up, $dl, $n) {
     // TODO: bonus formula
-    return 100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n)));
+    return round(100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n))));
   }
 
+  // TODO: migrate to Tracker\Traffic
   function updateBucket(&$bucket) {
     // generator update statement
     // TODO: later update
@@ -92,21 +115,15 @@ class ProcessTraffic extends SQL {
     });
 
     if (count($updates) > 0) { // > 1
-      $updateStatement = '(' .
-        implode('),(',
-          array_map(function ($row) {
-            return "'" . implode("','", [
-              $row['id'],
-              $row['up'],
-              $row['dl'],
-            ]) . "'";
-          }, $updates)
-        )
-        . ')';
+      $this->sql->query(static::genBatchUpdateSql(
+        'tracker_traffic',
+        ['id', 'rest_up', 'rest_dl'],
+        array_map(function ($row) {
+          return [$row['id'], $row['up'], $row['dl']];
+        }, $updates),
+        ['rest_up=VALUES(rest_up)', 'rest_dl=VALUES(rest_dl)']
+      ));
 
-      $this->sql->query("INSERT INTO tracker_traffic (id, rest_up, rest_dl) VALUES $updateStatement"
-        . " ON DUPLICATE KEY UPDATE rest_up=VALUES(rest_up), rest_dl=VALUES(rest_dl)"
-      );
       if ($this->sql->affected_rows > 0) {
         // TODO: / 2 ? affected rows ??
         print "UPDATE " . $this->sql->affected_rows . " rows' traffics\n";
@@ -116,6 +133,7 @@ class ProcessTraffic extends SQL {
     }
   }
 
+  // TODO: migrate to Tracker\Bonus
   function updateUser(&$set) {
     $updates = array_filter($set, function ($row) {
       return ($row['up'] != 0 || $row['dl'] != 0);
@@ -124,18 +142,22 @@ class ProcessTraffic extends SQL {
     $amount = count($updates);
 
     if ($amount > 0) { // > 1
-      $updateStatement = '(' .
-        implode('),(',
-          array_map(function ($row) use ($amount) {
-            return "'$row[id]', '$row[up]', '$row[dl]', '"
-              . static::formula($row['up'], $row['dl'], $amount)
-              . "'";
-          }, $updates)
-        )
-        . ')';
-      $this->sql->query("INSERT INTO tracker_bonus (id, up, dl, bonus) VALUES $updateStatement"
-        . " ON DUPLICATE KEY UPDATE up=up+VALUES(up), dl=dl+VALUES(dl), bonus=bonus+VALUES(bonus)"
-      );
+      $this->sql->query(static::genBatchUpdateSql(
+        'tracker_bonus',
+        ['id', 'up', 'dl', 'seed', 'leech', 'bonus'],
+        array_map(function ($row) use ($amount) {
+          return [$row['id'], $row['up'], $row['dl'], $row['seed'], $row['leech'],
+            static::formula($row['up'], $row['dl'], $amount)];
+        }, $updates),
+        [
+          'up=up+VALUES(up)',
+          'dl=dl+VALUES(dl)',
+          'seed=seed+VALUES(seed)',
+          'leech=leech+VALUES(leech)',
+          'bonus=bonus+VALUES(bonus)',
+        ]
+      ));
+
       if ($this->sql->affected_rows > 0) {
         print "UPDATE " . $this->sql->affected_rows . " users' bonus\n";
       } else {
