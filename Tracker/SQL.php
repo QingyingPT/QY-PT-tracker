@@ -11,7 +11,7 @@ class SQL {
     throw new \RuntimeException($err . "\n SQL Error [" . $this->sql->errno . "]: " . $this->sql->error);
   }
 
-  function esc ($str) {
+  function esc($str) {
     return $this->sql->real_escape_string($str);
   }
 }

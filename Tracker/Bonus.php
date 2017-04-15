@@ -11,18 +11,18 @@ class Bonus extends SQL {
 
   public $result = NULL;
 
-  static function seedTime2BonusFormula ($time) {
+  static function seedTime2BonusFormula($time) {
     // TODO: bonus formula
     static $k = (self::coff['AmountByTorrent'] / self::coff['DaysByTorrent'] * self::coff['HoursByDays']);
     return round($time / 3600 * $k);
   }
 
   // TODO: weight torrent
-  static function sumTrafficTime (&$traffics/* , torrentMap */) {
+  static function sumTrafficTime(&$traffics/* , torrentMap */) {
     return array_sum($traffics);
   }
 
-  function updateUserSeedBonus ($userid, &$traffics) {
+  function updateUserSeedBonus($userid, &$traffics) {
     // TODO: use intermediate to dynamic bonus
     $sum = static::sumTrafficTime($traffics);
     $bonus = static::seedTime2BonusFormula($sum);

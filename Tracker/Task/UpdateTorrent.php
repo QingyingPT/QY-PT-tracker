@@ -3,7 +3,7 @@
 use Tracker\SQL;
 
 class UpdateTorrent extends SQL {
-  public function updatePeers () {
+  public function updatePeers() {
     $res = $this->sql->query("SELECT torrent, SUM(seeder) as seeders, COUNT(*) as peers FROM tracker_peers GROUP BY torrent")
       or $this->throwSQLError('SELECT Error');
 

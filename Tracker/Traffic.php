@@ -5,7 +5,7 @@ use Tracker\SQL;
 class Traffic extends SQL {
   const DefaultTimeGap = 86400 * 30;
 
-  private function genUserTrafficCondSql ($userid, $torrent, $stt, $end) {
+  private function genUserTrafficCondSql($userid, $torrent, $stt, $end) {
     $whereSet = [];
 
     $stt = 0 + intval($stt);
@@ -34,7 +34,7 @@ class Traffic extends SQL {
     return $whereSet;
   }
 
-  function getUserAvailableTraffic ($userid, $torrent, $stt, $end = 0) {
+  function getUserAvailableTraffic($userid, $torrent, $stt, $end = 0) {
     $traffics = [];
 
     $whereSet = $this->genUserTrafficCondSql($userid, $torrent, $stt, $end);
@@ -67,7 +67,7 @@ class Traffic extends SQL {
     return $traffics;
   }
 
-  function updateUserTrafficStatus ($userid, $torrent, $stt, $end = 0) {
+  function updateUserTrafficStatus($userid, $torrent, $stt, $end = 0) {
     $error = [];
 
     $whereSet = $this->genUserTrafficCondSql($userid, $torrent, $stt, $end);

@@ -3,8 +3,7 @@
  * @se http://www.php-fig.org/psr/psr-0/
  */
 
-function autoload($className)
-{
+function autoload($className) {
     $className = ltrim($className, '\\');
     $fileName  = '';
     $namespace = '';
@@ -17,5 +16,6 @@ function autoload($className)
 
     require $fileName;
 }
+
 spl_autoload_register('autoload');
 

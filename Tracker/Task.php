@@ -7,7 +7,7 @@ use Tracker\Task\UpdateTorrent;
 use Tracker\Task\ProcessTraffic;
 
 class Task extends SQL {
-  function dotask ($name, $flag, $info, $func) {
+  function dotask($name, $flag, $info, $func) {
     if ($flag) {
       print("\n$info ...\n");
       $timeStart = microtime(true);
@@ -26,7 +26,7 @@ class Task extends SQL {
     }
   }
 
-  public function start () {
+  public function start() {
     $res = $this->sql->query("SELECT name FROM tracker_schedule WHERE (UNIX_TIMESTAMP() - (unit * val)) > UNIX_TIMESTAMP(last_action)")
       or $this->throwSQLError('SELECT Error');
 

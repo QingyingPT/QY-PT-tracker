@@ -5,11 +5,11 @@
 
 use Tracker\SQL;
 use Tracker\Config;
-use Tracker\SQLTrait;
+use Tracker\SQLHelper;
 use Tracker\Exception\Normal as NormalException;
 
 class ProcessTraffic extends SQL {
-  use SQLTrait;
+  use SQLHelper;
 
   static $queryfields = [
     'id',
@@ -25,7 +25,7 @@ class ProcessTraffic extends SQL {
     // 'last_action',
   ];
 
-  static function defineUser ($uid, &$users, $cb = NULL) {
+  static function defineUser($uid, &$users, $cb = NULL) {
     if (!isset($users[$uid])) {
       $users[$uid] = [
         'id' => $uid,
@@ -39,7 +39,7 @@ class ProcessTraffic extends SQL {
     if ($cb) $cb($users[$uid]);
   }
 
-  static function accUserTraffic ($traffic, $userUp, $userDl, &$users) {
+  static function accUserTraffic($traffic, $userUp, $userDl, &$users) {
     static::defineUser($userUp, $users, function (&$user) use ($traffic) {
       $user['up'] += $traffic;
     });
@@ -101,7 +101,7 @@ class ProcessTraffic extends SQL {
     }
   }
 
-  static function formula ($up, $dl, $n) {
+  static function formula($up, $dl, $n) {
     // TODO: bonus formula
     return round(100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n))));
   }
@@ -166,7 +166,7 @@ class ProcessTraffic extends SQL {
     }
   }
 
-  function start () {
+  function start() {
     // incomplete
     $annInterval = Config::$annInterval;
     $where = implode(' AND ', [

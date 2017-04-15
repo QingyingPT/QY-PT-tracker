@@ -1,6 +1,6 @@
 <?php
 
-function login () {
+function login() {
   $sql = old_get_mysql_link();
 
   $ip = getip();

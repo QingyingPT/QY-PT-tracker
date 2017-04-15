@@ -1,7 +1,7 @@
 <?php namespace Tracker;
 
-trait SQLTrait {
-  static function genBatchUpdateSql ($table, $fields, $updates, $how) {
+trait SQLHelper {
+  static function genBatchUpdateSql($table, $fields, $updates, $how) {
     // TODO: limit rows
 
     $updatestring = implode('),(',

@@ -9,7 +9,7 @@ require_once 'shutdown.php';
 dbconn_announce();
 require('login.php');
 
-function getParam ($name) {
+function getParam($name) {
   return isset($_REQUEST[$name])
     ? $_REQUEST[$name]
     : '';
