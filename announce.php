@@ -60,6 +60,8 @@ $infohash = esc($info['infohash']);
 $numwant = max(intval(getParam('numwant')), intval(getParam('num_want')), 0);
 $info['numwant'] = min($numwant ? $numwant : 16, 16);
 
+// seeder
+$seeder = ($info['left'] == 0);
 
 // check fields
 foreach (['passkey', 'infohash', 'peerid'] as $k) {
@@ -111,7 +113,7 @@ if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content'
   $Cache->cache_value('tracker_userbonus_' .$info['passkey'] .'_content', $row, 1950);
 }
 
-if ($row['bonus'] < 0) {
+if (!$seeder && $row['bonus'] < 0) {
   Notice('You run out of HP.');
 }
 
@@ -197,10 +199,8 @@ $peerFields = join(',', [
 ]);
 
 if ($info['left'] == 0) {
-  $seeder = true;
   $numPeerMax = $torrent['leechers'];
 } else {
-  $seeder = false;
   $numPeerMax = $torrent['leechers'] + $torrent['seeders'];
 }
 
