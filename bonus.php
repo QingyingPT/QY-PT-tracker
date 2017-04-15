@@ -4,10 +4,9 @@ require_once 'autoload.php';
 use Tracker\Bonus;
 use Tracker\Traffic;
 
-require_once('include/bittorrent_announce.php');
-require_once 'shutdown.php';
-dbconn_announce();
-require('login.php');
+require 'include/bittorrent_announce.php';
+require 'shutdown.php';
+require 'login.php';
 
 function getParam($name) {
   return isset($_REQUEST[$name])

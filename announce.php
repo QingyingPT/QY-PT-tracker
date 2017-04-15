@@ -5,9 +5,8 @@ use Tracker\Config;
 
 require_once('include/bittorrent_announce.php');
 require_once('include/benc.php');
-dbconn_announce();
 
-$sqlLink = old_get_mysql_link();
+$sqlLink = get_mysql_link();
 $row = null;
 
 function Notice($err) {
@@ -107,7 +106,7 @@ if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content'
     or Notice('Error: 0x0003');
   $row = $res->fetch_assoc();
   if (!$row) {
-    Notice('Please enable tacker first');
+    Notice('Please enable tracker first');
   }
   $Cache->cache_value('tracker_userbonus_' .$info['passkey'] .'_content', $row, 1950);
 }

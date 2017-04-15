@@ -1,7 +1,7 @@
 <?php
 
 function login() {
-  $sql = old_get_mysql_link();
+  $sql = get_mysql_link();
 
   $ip = getip();
   $nip = ip2long($ip);

@@ -5,17 +5,22 @@ require_once 'autoload.php';
 use Tracker\Task;
 
 require_once('include/bittorrent_announce.php');
-dbconn_announce();
 require('login.php');
 
 $user = login();
 
-if (!$user || $user['class'] < 'UC_SYSOP') {
+if (!$user) {
+  $ip = getip();
+  if ($ip != '::1') {
+    header('HTTP/1.1 403 Forbidden');
+    exit();
+  }
+} elseif($user['class'] < 'UC_SYSOP') {
   header('HTTP/1.1 403 Forbidden');
   exit();
 }
 
-$sqlLink = old_get_mysql_link();
+$sqlLink = get_mysql_link();
 
 function esc($str) {
   global $sqlLink;

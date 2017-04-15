@@ -44,9 +44,9 @@ class Task extends SQL {
       $difftime = Config::$annInterval * 3;
       $peers = new UpdatePeers();
       if (($num = $peers->cleanOldPeers($difftime)) > 0) {
-        print("delete $num old peers\n");
+        print("delete $num dead peers\n");
       } else {
-        print("no old peers\n");
+        print("no dead peers\n");
       }
     });
 

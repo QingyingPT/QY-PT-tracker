@@ -4,7 +4,11 @@ class SQL {
   protected $sql = NULL;
 
   function __construct() {
-    $this->sql = old_get_mysql_link();
+    $mysql_link = get_mysql_link();
+    if (!$mysql_link) {
+      throw new \RuntimeException("Miss MYSQLi connection");
+    }
+    $this->sql = $mysql_link;
   }
 
   function throwSQLError($err) {

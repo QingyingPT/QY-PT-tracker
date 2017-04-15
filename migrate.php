@@ -5,7 +5,6 @@ use Tracker\SQL;
 
 require_once 'include/bittorrent_announce.php';
 require_once 'shutdown.php';
-dbconn_announce();
 require('login.php');
 
 $user = login();
@@ -27,11 +26,34 @@ class Migrate extends SQL {
       return '';
     }
 
-    if ($this->sql->affected_row == 0) {
+    if ($this->sql->affected_rows == 0) {
       return '';
     }
 
     return $key;
+  }
+
+  function initBonus($user) {
+    // TODO: calculate initial bonus
+    $level = $user['class'];
+    $initBonus = ($level >= UC_VIP ? 10 : 150) * $level;
+    if ($level >= UC_VIP && $level < UC_CODER) {
+      $initBonus *= 3.5;
+    }
+
+    $res = $this->sql->query("SELECT id FROM tracker_bonus WHERE id = '$user[id]'")
+      or $this->throwSQLError('SELECT error');
+
+    if ($res->num_rows > 0) {
+      return true;
+    } else {
+      $this->sql->query("INSERT INTO tracker_bonus (id, bonus) VALUES ('$user[id]', '$initBonus')");
+      if ($this->sql->affected_rows > 0) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
@@ -39,7 +61,7 @@ $type = isset($_REQUEST['type']) ? $_REQUEST['type'] : 'snatch';
 
 $migrate = new Migrate();
 
-if ($type === 'snatch') {
+if ($type == 'snatch') {
   $key = $migrate->snatchToV2($user['id']);
   if ($key) {
     print json_encode([
@@ -52,6 +74,9 @@ if ($type === 'snatch') {
     trigger_error('404', E_USER_ERROR);
     exit();
   }
+} elseif ($type == 'bonus') {
+  print json_encode(['result' => $migrate->initBonus($user)]);
+  exit();
 }
 
 trigger_error('400', E_USER_ERROR);

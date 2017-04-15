@@ -30,8 +30,7 @@ if (!$hash || !$id) {
   E403('Invalid URL parameters');
 }
 
-dbconn_announce();
-$sqlLink = old_get_mysql_link();
+$sqlLink = get_mysql_link();
 
 function esc($str) {
   global $sqlLink;
@@ -95,7 +94,7 @@ if ($tracker_ssl == true){
 }
 
 
-$res = sql_query("SELECT id, name, filename, save_as, size, owner, banned, HEX(info_hash) as hash FROM torrents WHERE id='$id'")
+$res = $sqlLink->query("SELECT id, name, filename, save_as, size, owner, banned, HEX(info_hash) as hash FROM torrents WHERE id='$id'")
   or Notice('No torrent');
 $torrent = $res->fetch_assoc();
 $fn = "$torrent_dir/$id.torrent";
