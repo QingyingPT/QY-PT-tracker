@@ -164,8 +164,8 @@ $dict['value']['announce']['strlen'] = strlen($dict['value']['announce']['string
 // }
 
 
-// header("Content-Type: application/octet-stream");
-header("Content-Type: application/x-bittorrent");
+header("Content-Type: application/octet-stream");
+// header("Content-Type: application/x-bittorrent");
 
 if ( str_replace("Gecko", "", $_SERVER['HTTP_USER_AGENT']) != $_SERVER['HTTP_USER_AGENT']) {
   header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");

@@ -16,7 +16,7 @@ function login() {
   ) return false;
 
   $id = 0 + intval(isset($_COOKIE['c_secure_uid']) ? base64_decode($_COOKIE['c_secure_uid']) : 0);
-  $pass = isset($_COOKIE['c_secure_pass']) ? base64_decode($_COOKIE['c_secure_pass']) : '';
+  $pass = isset($_COOKIE['c_secure_pass']) ? $_COOKIE['c_secure_pass'] : '';
   $login = isset($_COOKIE['c_secure_login']) ? base64_decode($_COOKIE['c_secure_login']) : '';
 
   if ($id <= 0 || strlen($pass) != 32) return false;
