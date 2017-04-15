@@ -1,21 +1,25 @@
 <?php
 require_once('include/bittorrent_announce.php');
 require_once('include/benc.php');
+require 'login.php';
 
 $torrent_dir = 'torrents';
 
 function Notice($err) {
   // TODO:
-  die($err);
+  print $err;
+  exit();
 }
 
 function E403($err = 'No permission') {
   header('HTTP/1.0 403 Forbidden');
-  die($err);
+  print $err;
+  exit();
 }
 function E404($err = 'Not Found') {
   header('HTTP/1.0 404 Not Found');
-  die($err);
+  print $err;
+  exit();
 }
 
 
@@ -40,21 +44,11 @@ if ($passkey) {
   // TODO: record it
   $user = $res->fetch_assoc();
 } else {
-  if (empty($_COOKIE['c_secure_pass'])
-    || empty($_COOKIE['c_secure_uid'])
-    || empty($_COOKIE['c_secure_login'])) {
-    header('HTTP/1.0 403 Forbidden');
-    die();
-  }
+  $user = login();
 
-  $userid = 0 + intval(base64($_COOKIE['c_secure_uid'], false));
-  $sqlLink->query("SELECT * FROM users WHERE id='" .esc($userid) ."' LIMIT 0,1")
-    or Notice('Invalid cookie');
-
-  $user = $res->fetch_assoc();
-
-  if (md5($user['passhash'] .$_SERVER['REMOTE_ARRD']) != $_COOKIE['c_secure_pass']) {
-    Notice('Invalid cookie');
+  if (!$user) {
+    // header('HTTP/1.0 403 Forbidden');
+    E403('Invalid cookie');
   }
 }
 
@@ -106,6 +100,7 @@ $res = sql_query("SELECT id, name, filename, save_as, size, owner, banned, HEX(i
 $torrent = $res->fetch_assoc();
 $fn = "$torrent_dir/$id.torrent";
 
+
 if (!$torrent || !is_file($fn) || !is_readable($fn)) {
   E404();
 }
@@ -142,49 +137,48 @@ if ($res->num_rows == 0) {
     or Notice('SQL error 6');
 }
 
-
 // bencode
 $dict = bdec_file($fn, $max_torrent_size);
 $dict['value']['announce']['value'] = $ssl_torrent . $base_announce_url . "?passkey=$user[passkey]&downloadkey=$key";
 $dict['value']['announce']['string'] = strlen($dict['value']['announce']['value']).":".$dict['value']['announce']['value'];
 $dict['value']['announce']['strlen'] = strlen($dict['value']['announce']['string']);
 
-/*if ($announce_urls[1] != "") { // add multi-tracker
-	$dict['value']['announce-list']['type'] = "list";
-	$dict['value']['announce-list']['value'][0]['type'] = "list";
-	$dict['value']['announce-list']['value'][0]['value'][0]["type"] = "string";
-	$dict['value']['announce-list']['value'][0]['value'][0]["value"] = $ssl_torrent . $announce_urls[0] . "?passkey=$CURUSER[passkey]";
-	$dict['value']['announce-list']['value'][0]['value'][0]["string"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["value"]).":".$dict['value']['announce-list']['value'][0]['value'][0]["value"];
-	$dict['value']['announce-list']['value'][0]['value'][0]["strlen"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["string"]);
-	$dict['value']['announce-list']['value'][0]['string'] = "l".$dict['value']['announce-list']['value'][0]['value'][0]["string"]."e";
-	$dict['value']['announce-list']['value'][0]['strlen'] = strlen($dict['value']['announce-list']['value'][0]['string']);
-	$dict['value']['announce-list']['value'][1]['type'] = "list";
-	$dict['value']['announce-list']['value'][1]['value'][0]["type"] = "string";
-	$dict['value']['announce-list']['value'][1]['value'][0]["value"] = $ssl_torrent . $announce_urls[1] . "?passkey=$CURUSER[passkey]";
-	$dict['value']['announce-list']['value'][1]['value'][0]["string"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["value"]).":".$dict['value']['announce-list']['value'][0]['value'][0]["value"];
-	$dict['value']['announce-list']['value'][1]['value'][0]["strlen"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["string"]);
-	$dict['value']['announce-list']['value'][1]['string'] = "l".$dict['value']['announce-list']['value'][0]['value'][0]["string"]."e";
-	$dict['value']['announce-list']['value'][1]['strlen'] = strlen($dict['value']['announce-list']['value'][0]['string']);
-	$dict['value']['announce-list']['string'] = "l".$dict['value']['announce-list']['value'][0]['string'].$dict['value']['announce-list']['value'][1]['string']."e";
-	$dict['value']['announce-list']['strlen'] = strlen($dict['value']['announce-list']['string']);
-}*/
+// NOTE: no need
+// if ($announce_urls[1] != "") { // add multi-tracker
+//   $dict['value']['announce-list']['type'] = "list";
+//   $dict['value']['announce-list']['value'][0]['type'] = "list";
+//   $dict['value']['announce-list']['value'][0]['value'][0]["type"] = "string";
+//   $dict['value']['announce-list']['value'][0]['value'][0]["value"] = $ssl_torrent . $announce_urls[0] . "?passkey=$CURUSER[passkey]";
+//   $dict['value']['announce-list']['value'][0]['value'][0]["string"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["value"]).":".$dict['value']['announce-list']['value'][0]['value'][0]["value"];
+//   $dict['value']['announce-list']['value'][0]['value'][0]["strlen"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["string"]);
+//   $dict['value']['announce-list']['value'][0]['string'] = "l".$dict['value']['announce-list']['value'][0]['value'][0]["string"]."e";
+//   $dict['value']['announce-list']['value'][0]['strlen'] = strlen($dict['value']['announce-list']['value'][0]['string']);
+//   $dict['value']['announce-list']['value'][1]['type'] = "list";
+//   $dict['value']['announce-list']['value'][1]['value'][0]["type"] = "string";
+//   $dict['value']['announce-list']['value'][1]['value'][0]["value"] = $ssl_torrent . $announce_urls[1] . "?passkey=$CURUSER[passkey]";
+//   $dict['value']['announce-list']['value'][1]['value'][0]["string"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["value"]).":".$dict['value']['announce-list']['value'][0]['value'][0]["value"];
+//   $dict['value']['announce-list']['value'][1]['value'][0]["strlen"] = strlen($dict['value']['announce-list']['value'][0]['value'][0]["string"]);
+//   $dict['value']['announce-list']['value'][1]['string'] = "l".$dict['value']['announce-list']['value'][0]['value'][0]["string"]."e";
+//   $dict['value']['announce-list']['value'][1]['strlen'] = strlen($dict['value']['announce-list']['value'][0]['string']);
+//   $dict['value']['announce-list']['string'] = "l".$dict['value']['announce-list']['value'][0]['string'].$dict['value']['announce-list']['value'][1]['string']."e";
+//   $dict['value']['announce-list']['strlen'] = strlen($dict['value']['announce-list']['string']);
+// }
 
 
 // header("Content-Type: application/octet-stream");
 header("Content-Type: application/x-bittorrent");
 
 if ( str_replace("Gecko", "", $_SERVER['HTTP_USER_AGENT']) != $_SERVER['HTTP_USER_AGENT']) {
-	header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
+  header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
 } else if ( str_replace("Firefox", "", $_SERVER['HTTP_USER_AGENT']) != $_SERVER['HTTP_USER_AGENT'] ) {
-	header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
+  header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
 } else if ( str_replace("Opera", "", $_SERVER['HTTP_USER_AGENT']) != $_SERVER['HTTP_USER_AGENT'] ) {
-	header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
+  header ("Content-Disposition: attachment; filename=\"$torrentnameprefix.".$torrent["save_as"].".torrent\" ; charset=utf-8");
 } else if ( str_replace("IE", "", $_SERVER['HTTP_USER_AGENT']) != $_SERVER['HTTP_USER_AGENT'] ) {
-	header ("Content-Disposition: attachment; filename=".str_replace("+", "%20", rawurlencode("$torrentnameprefix." . $torrent["save_as"] .".torrent")));
+  header ("Content-Disposition: attachment; filename=".str_replace("+", "%20", rawurlencode("$torrentnameprefix." . $torrent["save_as"] .".torrent")));
 } else {
-	header ("Content-Disposition: attachment; filename=".str_replace("+", "%20", rawurlencode("$torrentnameprefix." . $torrent["save_as"] .".torrent")));
+  header ("Content-Disposition: attachment; filename=".str_replace("+", "%20", rawurlencode("$torrentnameprefix." . $torrent["save_as"] .".torrent")));
 }
 
 //ob_implicit_flush(true);
 print(benc($dict));
-?>
