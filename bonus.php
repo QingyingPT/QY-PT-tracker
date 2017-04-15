@@ -5,6 +5,7 @@ use Tracker\Bonus;
 use Tracker\Traffic;
 
 require_once('include/bittorrent_announce.php');
+require_once 'shutdown.php';
 dbconn_announce();
 require('login.php');
 
@@ -17,7 +18,8 @@ function getParam ($name) {
 $user = login();
 
 if ($user == false) {
-  print json_encode(['error' => 403]);
+  trigger_error('403', E_USER_ERROR);
+  exit();
 }
 
 $torrent = 0 + intval(getParam('torrent'));
@@ -36,6 +38,7 @@ if ($method == 'query') {
     'end' => $yesterday,
     'traffics' => $traffics,
   ]);
+  exit();
 } else if ($method == 'update') {
   $t = new Traffic();
   $traffics = $t->getUserAvailableTraffic($user['id'], $torrent, $lastMonth, $yesterday);
@@ -63,4 +66,5 @@ if ($method == 'query') {
     'bonus' => $updateResult['bonus'],
     'sum' => $updateResult['sum'],
   ]);
+  exit();
 }

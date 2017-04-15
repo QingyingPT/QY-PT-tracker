@@ -11,7 +11,7 @@ require('login.php');
 $user = login();
 
 if ($user == false) {
-  print json_encode(['error' => 403]);
+  trigger_error('403', E_USER_ERROR);
   exit();
 }
 
@@ -49,9 +49,9 @@ if ($type === 'snatch') {
     ]);
     exit();
   } else {
-    print json_encode(['error' => 404]);
+    trigger_error('404', E_USER_ERROR);
     exit();
   }
 }
 
-die('{}');
+trigger_error('400', E_USER_ERROR);

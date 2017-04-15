@@ -6,6 +6,14 @@ use Tracker\Task;
 
 require_once('include/bittorrent_announce.php');
 dbconn_announce();
+require('login.php');
+
+$user = login();
+
+if (!$user || $user['class'] < 190) {
+  header('HTTP/1.1 403 Forbidden');
+  exit();
+}
 
 $sqlLink = old_get_mysql_link();
 
