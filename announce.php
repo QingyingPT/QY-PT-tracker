@@ -20,6 +20,10 @@ function getParam($name) {
   return isset($_GET[$name]) ? $_GET[$name] : null;
 };
 
+function hashPad($hash) {
+  return str_pad($hash, 20);
+}
+
 function esc($str) {
   global $sqlLink;
   return $sqlLink->real_escape_string($str);
@@ -49,12 +53,12 @@ $info = [
 
 $info['hash'] = preg_replace_callback('/./s', function ($matches) {
   return sprintf('%02x', ord($matches[0]));
-}, hash_pad($info['infohash']));
+}, hashPad($info['infohash']));
 
 $peerid = esc($info['peerid']);
 $infohash = esc($info['infohash']);
 
-$numwant = max(intval(getParam('numwant')), intval(getParam('num_want')), 0); 
+$numwant = max(intval(getParam('numwant')), intval(getParam('num_want')), 0);
 $info['numwant'] = min($numwant ? $numwant : 16, 16);
 
 
@@ -100,16 +104,16 @@ if ($user['downloadpos'] == 'no')
 // validate HP
 if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content')) {
   $res = $sqlLink->query("SELECT bonus FROM tracker_bonus WHERE id = '$user[id]' LIMIT 0,1")
-    or Notice('Error: 0x0001');
+    or Notice('Error: 0x0003');
   $row = $res->fetch_assoc();
   if (!$row) {
-    Notice('Error: 0x0001');
+    Notice('Please enable tacker first');
   }
   $Cache->cache_value('tracker_userbonus_' .$info['passkey'] .'_content', $row, 1950);
 }
 
 if ($row['bonus'] < 0) {
-  Notice('You run up all HP.');
+  Notice('You run out of HP.');
 }
 
 // validate client
@@ -231,14 +235,14 @@ $body = [
 
 // get peer list
 
-$res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' " 
+$res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' "
   .($seeder ? "AND seeder = 0 " : '')
   ."ORDER BY RAND() LIMIT 0, $info[numwant]")
   or Notice('Error: 0x0008');
 
 $peerList = [];
 while ($res && $row = $res->fetch_assoc()) {
-  $row['peer_id'] = hash_pad($row['peer_id']);
+  $row['peer_id'] = hashPad($row['peer_id']);
   if ($row['peer_id'] === $info['peerid']) {
     continue;
   }
@@ -434,7 +438,7 @@ if ($seeder) {
     or Notice('Error: 0x1005');
 
   // generator tag
-  
+
   if ($torrent['diff_action_day'] > 100)
     $sqlLink->query("INSERT INTO sitelog (added, txt, security_level) VALUES('$dt', 'Torrent $torrent[id] added BUMP tag. The seeder (User $user[id]) exists after $torrent[diff_action_day] days.', 'mod')")
       or Notice('Error: 0x000c');
