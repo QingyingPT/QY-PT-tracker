@@ -151,7 +151,7 @@ if (1 || !$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) 
 $torrent = $row;
 
 // validate torrent priviledge
-if ($torrent['banned'] && $user['class'] < $seebanned_class && $torrent['owner'] != $user['id'])
+if ($torrent['banned'] == 'yes' && $user['class'] < $seebanned_class && $torrent['owner'] != $user['id'])
   Notice('Torrent banned!');
 
 
