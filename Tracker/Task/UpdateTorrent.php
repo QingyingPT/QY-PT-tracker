@@ -22,11 +22,11 @@ class UpdateTorrent extends SQL {
       $this->throwSQLError('Can\'t update torrent info');
       return 0;
     }
+    $ret = $this->sql->affected_rows;
 
     $this->sql->query("UPDATE torrents SET seeders = 0, leechers = 0, visible = 'no', last_update = CURRENT_TIMESTAMP WHERE last_update < '$dt'");
     // TODO: check error
 
-    $ret = $this->sql->affected_rows;
     return $ret;
   }
 }
