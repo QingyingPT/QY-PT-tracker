@@ -85,11 +85,12 @@ function err($err) {
 
 function check_client($peer_id, $agent) {
   global $Cache;
+  global $mysql_link;
 
   if (!$clients = $Cache->get_value('allowed_client_list')){
     $clients = array();
-    $res = mysql_query("SELECT * FROM agent_allowed_family ORDER BY hits DESC") or err("check err");
-    while ($row = mysql_fetch_array($res))
+    $res = $mysql_link->query("SELECT * FROM agent_allowed_family ORDER BY hits DESC") or err("check err");
+    while ($row = $res->fetch_array())
       $clients[] = $row;
     $Cache->cache_value('allowed_client_list', $clients, 86400);
   }
@@ -215,8 +216,8 @@ function check_client($peer_id, $agent) {
     {
       if (!$clients_exp = $Cache->get_value('allowed_client_exception_family_'.$family_id.'_list')){
         $clients_exp = array();
-        $res = mysql_query("SELECT * FROM agent_allowed_exception WHERE family_id = $family_id") or err("check err");
-        while ($row = mysql_fetch_array($res))
+        $res = $mysql_link->query("SELECT * FROM agent_allowed_exception WHERE family_id = $family_id") or err("check err");
+        while ($row = $res->fetch_array())
           $clients_exp[] = $row;
         $Cache->cache_value('allowed_client_exception_family_'.$family_id.'_list', $clients_exp, 86400);
       }
@@ -256,11 +257,12 @@ function check_client($peer_id, $agent) {
 
 function check_client_family($peer_id, $agent) {
   global $Cache;
+  global $mysql_link;
 
   if (!$clients = $Cache->get_value('allowed_client_list')){
     $clients = array();
-    $res = mysql_query("SELECT * FROM agent_allowed_family ORDER BY hits DESC") or err("check err");
-    while ($row = mysql_fetch_array($res))
+    $res = $mysql_link->query("SELECT * FROM agent_allowed_family ORDER BY hits DESC") or err("check err");
+    while ($row = $res->fetch_array())
       $clients[] = $row;
     $Cache->cache_value('allowed_client_list', $clients, 86400);
   }
@@ -386,8 +388,8 @@ function check_client_family($peer_id, $agent) {
     {
       if (!$clients_exp = $Cache->get_value('allowed_client_exception_family_'.$family_id.'_list')){
         $clients_exp = array();
-        $res = mysql_query("SELECT * FROM agent_allowed_exception WHERE family_id = $family_id") or err("check err");
-        while ($row = mysql_fetch_array($res))
+        $res = $mysql_link->query("SELECT * FROM agent_allowed_exception WHERE family_id = $family_id") or err("check err");
+        while ($row = $res->fetch_array())
           $clients_exp[] = $row;
         $Cache->cache_value('allowed_client_exception_family_'.$family_id.'_list', $clients_exp, 86400);
       }
