@@ -69,5 +69,7 @@ class Task extends SQL {
     // check cheater -> traffic
     // check cheater -> time
     // check cheater -> multiple client
+    // count client agents
+    // count inactive torrents
   }
 }
