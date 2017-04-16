@@ -6,8 +6,8 @@ use Tracker\SQLHelper;
 class UpdateTorrent extends SQL {
   use SQLHelper;
 
-  public function updatePeers($difftime) {
-    $dt = esc(date('Y-m-d H:i:s', round(TIMENOW - $difftime / 2)));
+  public function updatePeers($difftime = 1200) {
+    $dt = esc(date('Y-m-d H:i:s', round(TIMENOW - $difftime)));
 
     $ret = 0;
     $this->sql->query("INSERT INTO torrents (id, seeders, leechers)"
