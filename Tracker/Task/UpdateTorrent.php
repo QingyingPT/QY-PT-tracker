@@ -10,7 +10,7 @@ class UpdateTorrent extends SQL {
     $dt = esc(date('Y-m-d H:i:s', round(TIMENOW - $difftime)));
 
     $ret = 0;
-    $this->sql->query("INSERT INTO torrents (id, seeders, leechers)"
+    $this->sql->query("INSERT INTO torrents (id, info_hash, seeders, leechers)"
       . " SELECT t.id, t.info_hash, SUM(p.seeder), (COUNT(*) - SUM(p.seeder))"
       . "   FROM tracker_peers AS p RIGHT JOIN torrents AS t ON t.id = p.torrent"
       . "   GROUP BY p.torrent"
