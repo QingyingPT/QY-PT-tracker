@@ -192,6 +192,7 @@ $peerFields = join(',', [
   'peer_id',
   'ip',
   'ipv6',
+  'port',
   'uploaded',
   'downloaded',
   'UNIX_TIMESTAMP(last_action) AS last_action',
@@ -255,7 +256,8 @@ while ($res && $row = $res->fetch_assoc()) {
   if ($info['compact'] == 1) {
     $l = ip2long($row['ip']);
     // skip IPv6 address
-    if ($l) $peerList[] = pack('Nn', sprintf('%d', $l), $row['port']);
+    if ($l)
+      $peerList[] = pack('Nn', sprintf('%d', $l), $row['port']);
   } elseif ($info['noPeerId'] == 1) {
     if ($row['ip'])
       $peerList[] = 'd'
