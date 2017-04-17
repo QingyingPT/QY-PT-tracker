@@ -78,9 +78,11 @@ if ($user['downloadpos'] == 'no') {
 //   $tracker_ssl = false;
 
 $tracker_ssl = false;
-if(isset($_SERVER['HTTPS'])){
-  $tracker_ssl = true;
-}
+if(isset($_SERVER['HTTPS'])
+  || (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] == 'https')
+  || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
+) $tracker_ssl = true;
+
 
 if ($tracker_ssl == true){
   $ssl_torrent = 'https://';
