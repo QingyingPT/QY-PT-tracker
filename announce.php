@@ -232,6 +232,10 @@ $body = [
   benc_str('incomplete') .'i' .$torrent['leechers'] .'e',
 ];
 
+// check compact flag
+if (!ip2long($info['ip'])) $info['compact'] = 0; // disable for IPv6
+
+
 // get peer list
 
 $res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' "
@@ -250,13 +254,30 @@ while ($res && $row = $res->fetch_assoc()) {
   // TODO: ip or ipv6 from 'ip' field
   if ($info['compact'] == 1) {
     $l = ip2long($row['ip']);
+    // skip IPv6 address
     if ($l) $peerList[] = pack('Nn', sprintf('%d', $l), $row['port']);
   } elseif ($info['noPeerId'] == 1) {
-    if ($row['ip']) $peerList[] = 'd' .join('', array_map('benc_str', ['ip', $row['ip'], 'port'])) .'i' .$row['port'] .'e' .'e';
-    if ($row['ipv6']) $peerList[] = 'd' .join('', array_map('benc_str', ['ip', $row['ipv6'], 'port'])) .'i' .$row['port'] .'e' .'e';
+    if ($row['ip'])
+      $peerList[] = 'd'
+        . implode('', array_map('benc_str', ['ip', $row['ip'], 'port']))
+        . 'i' .$row['port'] . 'e'
+        . 'e';
+    if ($row['ipv6'] && $row['ip'] != $row['ipv6'])
+      $peerList[] = 'd'
+        . implode('', array_map('benc_str', ['ip', $row['ipv6'], 'port']))
+        . 'i' . $row['port'] . 'e'
+        . 'e';
   } else {
-    if ($row['ip']) $peerList[] = 'd' .join('', array_map('benc_str', ['ip', $row['ip'], 'peer id', $row['peer_id'], 'port'])) .'i' .$row['port'] .'e' .'e';
-    if ($row['ipv6']) $peerList[] = 'd' .join('', array_map('benc_str', ['ip', $row['ipv6'], 'peer id', $row['peer_id'], 'port'])) .'i' .$row['port'] .'e' .'e';
+    if ($row['ip'])
+      $peerList[] = 'd'
+        . join('', array_map('benc_str', ['ip', $row['ip'], 'peer id', $row['peer_id'], 'port']))
+        . 'i' . $row['port'] . 'e'
+        . 'e';
+    if ($row['ipv6'])
+      $peerList[] = 'd'
+        . join('', array_map('benc_str', ['ip', $row['ipv6'], 'peer id', $row['peer_id'], 'port']))
+        . 'i' . $row['port'] . 'e'
+        . 'e';
   }
 }
 
