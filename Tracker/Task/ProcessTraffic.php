@@ -173,6 +173,7 @@ class ProcessTraffic extends SQL {
       "is_old = false",
       "invalid = false",
       "(rest_up > 0 OR rest_dl > 0)",
+      "during > 0", // filter 'invalid' traffic
       "last_action >  '" . esc(date('Y-m-d H:i:s', TIMENOW - $annInterval * 5)) . "'",
       "last_action <= '" . esc(date('Y-m-d H:i:s', TIMENOW - $annInterval * 2)) . "'",
     ]);
