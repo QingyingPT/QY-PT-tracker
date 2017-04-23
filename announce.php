@@ -245,7 +245,7 @@ $body = [
 
 // get peer list
 
-if ($errHandle) {
+if (!$errHandle) {
   // check compact flag
   if (!ip2long($info['ip'])) $info['compact'] = 0; // disable for IPv6
 
@@ -301,6 +301,8 @@ if ($errHandle) {
 
   // TODO: check user level
   $body[] = $peerInfo;
+} else {
+  $body[] = '5:peers0:';
 }
 
 // update peer
