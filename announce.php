@@ -8,6 +8,10 @@ require_once('include/benc.php');
 
 $sqlLink = get_mysql_link();
 $row = null;
+$res = null;
+$errHandle = null;
+
+$delay = 4; // avoid too slow
 
 function Notice($err) {
   // TODO:
@@ -114,7 +118,11 @@ if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content'
 }
 
 if (!$seeder && $row['bonus'] < 0) {
-  Notice('You run out of HP.');
+  $errHandle = function () { Notice('You run out of HP.'); };
+
+  if ($info['uploaded'] == 0 && $info['downloaded'] == 0) {
+    $errHandle();
+  }
 }
 
 // validate client
@@ -163,6 +171,7 @@ if (!$row = $Cache->get_value("tracker_snatch_$torrent[id]_$user[id]_content")) 
     or Notice('Error: 0x001a');
   $row = $res->fetch_assoc();
   if (!$row) {
+    // TODO: record invaild key
     Notice('Invalid key! Please re-download .torrent file.');
   }
 
@@ -212,8 +221,9 @@ $self = $res ? $res->fetch_assoc() : false;
 
 // validate interval time
 
-if ($self && $self['prev_action'] > (TIMENOW - $annInterval))
-  Notice("There is a minimum announce time of $annInterval seconds");
+if ($self && $self['prev_action'] > (TIMENOW - $annInterval + $delay)) {
+  $errHandle = $errHandle ? : function () use ($annInterval) { Notice("There is a minimum announce time of $annInterval seconds"); };
+}
 
 // validate leech and seed limit
 $res = $sqlLink->query("SELECT COUNT(*) FROM tracker_peers WHERE torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id != '$peerid'")
@@ -233,67 +243,68 @@ $body = [
   benc_str('incomplete') .'i' .$torrent['leechers'] .'e',
 ];
 
-// check compact flag
-if (!ip2long($info['ip'])) $info['compact'] = 0; // disable for IPv6
-
-
 // get peer list
 
-$res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' "
-  .($seeder ? "AND seeder = 0 " : '')
-  ."ORDER BY RAND() LIMIT 0, $info[numwant]")
-  or Notice('Error: 0x0008');
+if ($errHandle) {
+  // check compact flag
+  if (!ip2long($info['ip'])) $info['compact'] = 0; // disable for IPv6
 
-$peerList = [];
-while ($res && $row = $res->fetch_assoc()) {
-  $row['peer_id'] = hashPad($row['peer_id']);
-  if ($row['peer_id'] === $info['peerid']) {
-    continue;
+  $res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' "
+    .($seeder ? "AND seeder = 0 " : '')
+    ."ORDER BY RAND() LIMIT 0, $info[numwant]")
+    or Notice('Error: 0x0008');
+
+  $peerList = [];
+  while ($res && $row = $res->fetch_assoc()) {
+    $row['peer_id'] = hashPad($row['peer_id']);
+    if ($row['peer_id'] === $info['peerid']) {
+      continue;
+    }
+
+    // TODO: network address transform
+    // TODO: ip or ipv6 from 'ip' field
+    if ($info['compact'] == 1) {
+      $l = ip2long($row['ip']);
+      // skip IPv6 address
+      if ($l)
+        $peerList[] = pack('Nn', sprintf('%d', $l), $row['port']);
+    } elseif ($info['noPeerId'] == 1) {
+      if ($row['ip'])
+        $peerList[] = 'd'
+          . implode('', array_map('benc_str', ['ip', $row['ip'], 'port']))
+          . 'i' .$row['port'] . 'e'
+          . 'e';
+      if ($row['ipv6'] && $row['ip'] != $row['ipv6'])
+        $peerList[] = 'd'
+          . implode('', array_map('benc_str', ['ip', $row['ipv6'], 'port']))
+          . 'i' . $row['port'] . 'e'
+          . 'e';
+    } else {
+      if ($row['ip'])
+        $peerList[] = 'd'
+          . join('', array_map('benc_str', ['ip', $row['ip'], 'peer id', $row['peer_id'], 'port']))
+          . 'i' . $row['port'] . 'e'
+          . 'e';
+      if ($row['ipv6'])
+        $peerList[] = 'd'
+          . join('', array_map('benc_str', ['ip', $row['ipv6'], 'peer id', $row['peer_id'], 'port']))
+          . 'i' . $row['port'] . 'e'
+          . 'e';
+    }
   }
 
-  // TODO: network address transform
-  // TODO: ip or ipv6 from 'ip' field
-  if ($info['compact'] == 1) {
-    $l = ip2long($row['ip']);
-    // skip IPv6 address
-    if ($l)
-      $peerList[] = pack('Nn', sprintf('%d', $l), $row['port']);
-  } elseif ($info['noPeerId'] == 1) {
-    if ($row['ip'])
-      $peerList[] = 'd'
-        . implode('', array_map('benc_str', ['ip', $row['ip'], 'port']))
-        . 'i' .$row['port'] . 'e'
-        . 'e';
-    if ($row['ipv6'] && $row['ip'] != $row['ipv6'])
-      $peerList[] = 'd'
-        . implode('', array_map('benc_str', ['ip', $row['ipv6'], 'port']))
-        . 'i' . $row['port'] . 'e'
-        . 'e';
-  } else {
-    if ($row['ip'])
-      $peerList[] = 'd'
-        . join('', array_map('benc_str', ['ip', $row['ip'], 'peer id', $row['peer_id'], 'port']))
-        . 'i' . $row['port'] . 'e'
-        . 'e';
-    if ($row['ipv6'])
-      $peerList[] = 'd'
-        . join('', array_map('benc_str', ['ip', $row['ipv6'], 'peer id', $row['peer_id'], 'port']))
-        . 'i' . $row['port'] . 'e'
-        . 'e';
-  }
+  $peerInfo = benc_str('peers');
+  if ($info['compact'] == 1)
+    $peerInfo .= benc_str(join('', $peerList));
+  else
+    $peerInfo .= 'l' .join('', $peerList) .'e';
+
+  // TODO: check user level
+  $body[] = $peerInfo;
 }
 
-$peerInfo = benc_str('peers');
-if ($info['compact'] == 1)
-  $peerInfo .= benc_str(join('', $peerList));
-else
-  $peerInfo .= 'l' .join('', $peerList) .'e';
-
-// TODO: check user level
-$body[] = $peerInfo;
-
-
 // update peer
+
 $dt = esc(date('Y-m-d H:i:s', $info['ts']));
 if ($self) {
   // TODO: ip info
@@ -303,19 +314,21 @@ if ($self) {
     "downloaded = '$info[downloaded]'",
     "ip = '" .esc($info['ip']) ."'",
     "ipv6 = '" .esc($info['ipv6']) ."'",
-    "prev_action = last_action",
     "last_action = '$dt'",
     "seeder = '$seeder'",
   ];
 
+  if (!$errHandle)
+    $updates[] = "prev_action = '$dt'";
+
   $where = "torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id = '$peerid'";
 
-  // NOTE: don't update torrent info
   // TODO: if re-add torrent ?
   if ($info['event'] == 'completed') { // complete: update seeder status
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1002');
-  } elseif ($info['event'] == 'stop') { // stop: delete peer
+  } elseif ($info['event'] == 'stoped') { // stop: delete peer
+    // TODO: check if time is 0
     $sqlLink->query("DELETE FROM tracker_peers WHERE $where")
       or Notice('Error: 0x2001');
   } else {
@@ -460,7 +473,7 @@ if ($seeder) {
     or Notice('Error: 0x1005');
 
   // generator tag
-
+  // TODO: use torrent 'tag' field
   if ($torrent['diff_action_day'] > 100)
     $sqlLink->query("INSERT INTO sitelog (added, txt, security_level) VALUES('$dt', 'Torrent $torrent[id] added BUMP tag. The seeder (User $user[id]) exists after $torrent[diff_action_day] days.', 'mod')")
       or Notice('Error: 0x000c');
@@ -481,6 +494,8 @@ if (isset($userUpdateSet) && count($userUpdateSet) > 0) {
 }
 
 // output info
+
+if ($errHandle) $errHandle();
 
 benc_resp_raw('d' .join('', $body) .'e');
 exit();
