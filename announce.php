@@ -312,7 +312,7 @@ if ($self) {
 
   // NOTE: don't update torrent info
   // TODO: if re-add torrent ?
-  if ($info['event'] == 'complete') { // complete: update seeder status
+  if ($info['event'] == 'completed') { // complete: update seeder status
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1002');
   } elseif ($info['event'] == 'stop') { // stop: delete peer
@@ -437,7 +437,7 @@ $updates[] = "uploaded = uploaded + $upTraffic";
 $updates[] = "downloaded = downloaded + $downTraffic";
 $updates[] = ($seeder && !$downTraffic) ? "seedtime = seedtime + $timeTraffic" : "leechtime = leechtime + $timeTraffic";
 
-if ($info['event'] == 'complete') {
+if ($info['event'] == 'completed') {
   $updates[] = "finish_times = finish_times + 1";
   $updates[] = "finishdat = '$dt'";
 }
@@ -452,7 +452,7 @@ if ($seeder) {
     "last_action = '$dt'",
   ];
 
-  if ($info['event'] == 'complete') {
+  if ($info['event'] == 'completed') {
     $updates[] = 'times_completed = times_completed + 1';
   }
 
