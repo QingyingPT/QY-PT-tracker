@@ -41,7 +41,7 @@ class Task extends SQL {
 
     // clean old peers
     $this->dotask('peer', in_array('peer', $arr), 'clean old peers', function () {
-      $difftime = Config::$annInterval * 3;
+      $difftime = Config::$peerReserve;
       $peers = new UpdatePeers();
       if (($num = $peers->cleanOldPeers($difftime)) > 0) {
         print("delete $num dead peers\n");

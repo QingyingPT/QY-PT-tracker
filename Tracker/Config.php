@@ -5,4 +5,6 @@ class Config {
   public static $annIntervals = [1200, 1800, 2600];
   public static $annIntervalsThreshold = [3 * 86400, 30 * 86400];
 
+  public static $peerReserve = 86400; // TODO: check SQL server load
+
 }
