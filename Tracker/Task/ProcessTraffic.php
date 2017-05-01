@@ -49,14 +49,6 @@ class ProcessTraffic extends SQL {
     });
   }
 
-  static function accUserDuring($flag, $during, $uid, &$users) {
-    if ($during > 0) {
-      static::defineUser($uid, $users, function (&$user) use ($flag, $during) {
-        $user[$flag] += $during;
-      });
-    }
-  }
-
   static function balanceTraffic(&$bucketUp, &$bucketDl, &$users) {
     $i = 0;
     $j = 0;
@@ -70,14 +62,6 @@ class ProcessTraffic extends SQL {
       $restDl += $bucketDl[$j]['dl'];
       $bu = $bucketUp[$i];
       $bd = $bucketDl[$j];
-      // print "$i $bu[id] $j $bd[id] $bu[up] $bd[dl] $restDl $restUp \n";
-
-      if ($bucketUp[$i]['seeder'] != false) {
-        static::accUserDuring('seed', $bucketUp[$i]['during'], $bucketUp[$i]['userid'], $users);
-        $bucketUp[$i]['during'] = 0;
-      }
-      static::accUserDuring('leech', $bucketDl[$j]['during'], $bucketDl[$j]['userid'], $users);
-      $bucketDl[$j]['during'] = 0;
 
       if ($restUp < $restDl) {
         $bucketUp[$i]['up'] = 0;
@@ -101,7 +85,11 @@ class ProcessTraffic extends SQL {
     }
   }
 
-  static function formula($up, $dl, $n) {
+  static private function formulaTime($chunk, $weight) {
+    return round($chunk * $weght);
+  }
+
+  static private function formulaTraffic($up, $dl, $n) {
     // TODO: bonus formula
     return round(100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n))));
   }
@@ -144,29 +132,110 @@ class ProcessTraffic extends SQL {
     if ($amount > 0) { // > 1
       $this->sql->query(static::genBatchUpdateSql(
         'tracker_bonus',
-        ['id', 'up', 'dl', 'seed', 'leech', 'bonus'],
+        ['id', 'up', 'dl', 'bonus'],
         array_map(function ($row) use ($amount) {
-          return [$row['id'], $row['up'], $row['dl'], $row['seed'], $row['leech'],
-            static::formula($row['up'], $row['dl'], $amount)];
+          return [$row['id'], $row['up'], $row['dl'],
+            static::formulaTraffic($row['up'], $row['dl'], $amount)];
         }, $updates),
         [
           'up=up+VALUES(up)',
           'dl=dl+VALUES(dl)',
-          'seed=seed+VALUES(seed)',
-          'leech=leech+VALUES(leech)',
           'bonus=bonus+VALUES(bonus)',
         ]
       ));
 
       if ($this->sql->affected_rows > 0) {
-        print "UPDATE " . $this->sql->affected_rows . " users' bonus\n";
+        print "UPDATE " . $this->sql->affected_rows . " users' traffic\n";
       } else {
         $this->throwSQLError('Update user bonus ERROR');
       }
     }
   }
 
-  function start() {
+  function updateTime($seed) {
+    $annInterval = Config::$annInterval;
+    $seedTimeChunk = Config::$seedTimeChunk;
+    $dt = esc(date('Y-m-d H:i:s', TIMENOW - $annInterval * 5));
+    $where = implode(' AND ', [
+      "is_old = false",
+      "seeder = " . $seed ? 'true' : 'false',
+      "during > 0", // without init traffic
+      "during <= " . $annInterval * 2, // without timeout traffic
+      "last_action <= '$dt'",
+    ]);
+
+    $res = $this->sql->query("SELECT torrent, userid, SUM(during) AS t FROM tracker_traffic_null WHERE $where"
+      . " GROUP BY torrent, userid"
+      . " HAVING SUM(during) > '" . ($seed ? $seedTimeChunk : $annInterval) . "'"
+    );
+
+    if (!$res) {
+      $this->throwSQLError('Query Error');
+    }
+
+    $users = [];
+    $conditions = [];
+    // TODO: weight the torrent size, the number of seeders, the day or night, the torrent age, etc.
+    while($row = $res->fetch_row()) {
+      $torrent = $row['torrent'];
+      $userid = $row['userid'];
+      $conditions[] = "(torrent=$torrent AND userid=$userid)";
+
+      if (!isset($users[$userid])) {
+        $users[$userid] = 0;
+      }
+      // TODO: remove default value
+      $users[$userid] += $row['t'];
+    }
+
+    if (count($conditions) == 0) return;
+
+    $condition = implode(' OR ', $conditions);
+    $where .= " AND $condition";
+    $this->sql->query("UPDATE tracker_traffic_null SET is_old = true WHERE $where");
+
+    print("process " . $this->sql->affected_rows . " traffic\n");
+
+    $updates = [];
+    if ($seed) {
+      foreach ($users as $id => $time) {
+        $updates[] = [$id, $time, static::formulaTime($time / $seedTimeChunk, 10)];
+      }
+
+      $this->sql->query(static::genBatchUpdateSql(
+        'tracker_bonus',
+        ['id', 'seed', 'bonus'],
+        $updates,
+        ["seed=seed+VALUES(seed)", "bonus=bonus+VALUES(bonus)"]
+      ));
+
+      print("UPDATE " . $this->sql->affected_rows . " users' seedtime");
+    } else {
+      // TODO: calculater leech bonus
+      foreach ($users as $id => $time) {
+        $updates[] = [$id, $time];
+      }
+
+      $this->sql->query(static::genBatchUpdateSql(
+        'tracker_bonus',
+        ['id', 'leech'],
+        $updates,
+        ["leech=leech+VALUES(leech)"]
+      ));
+
+      print("UPDATE " . $this->sql->affected_rows . " users' seedtime");
+    }
+  }
+
+  function updateSeedTime() {
+    $this->updateTime(true);
+  }
+
+  // TODO: process leech time
+  // function updateLeechTime() {
+  // }
+
+  function updateTraffic() {
     // incomplete
     $annInterval = Config::$annInterval;
     $where = implode(' AND ', [
@@ -221,6 +290,6 @@ class ProcessTraffic extends SQL {
     // update user bonus
     $this->updateUser($usersUpdateSet);
 
-    return 'DONE';
+    return 0;
   }
 }

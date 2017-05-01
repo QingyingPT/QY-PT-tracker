@@ -63,7 +63,9 @@ class Task extends SQL {
     // force traffics expiration
     $this->dotask('traffic', in_array('traffic', $arr), 'update traffic info', function () {
       $process = new ProcessTraffic();
-      return $process->start();
+      $process->updateTraffic();
+      $process->updateSeedTime();
+      return 'DONE';
     });
 
     // check cheater -> traffic

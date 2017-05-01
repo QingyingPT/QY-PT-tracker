@@ -399,6 +399,7 @@ if (!$self || $info['event'] == 'started') { // ignore old peer
   $timeTraffic = max(TIMENOW - $self['last_action'], 0);
 }
 
+// record traffic
 if ($downTraffic || $upTraffic) {
   $fields = [
     'torrent',
@@ -428,43 +429,50 @@ if ($downTraffic || $upTraffic) {
 
   $sqlLink->query("INSERT INTO tracker_traffic (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
     or Notice('Error: 0x000b');
-} else {
-  $fields = [
-    'torrent',
-    'userid',
-    'peer_id',
-    'port',
-    'during',
-    'seeder',
-  ];
-
-  $values = [
-    $torrent['id'],
-    $user['id'],
-    $peerid,
-    $info['port'],
-    $timeTraffic,
-    $seeder,
-  ];
-
-  $sqlLink->query("INSERT INTO tracker_traffic_null (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
-    or Notice('Error: 0x000b');
 }
+
+// record time
+$fields = [
+  'torrent',
+  'userid',
+  'peer_id',
+  'port',
+  'during',
+  'seeder',
+];
+
+$values = [
+  $torrent['id'],
+  $user['id'],
+  $peerid,
+  $info['port'],
+  $timeTraffic,
+  $seeder,
+];
+
+$sqlLink->query("INSERT INTO tracker_traffic_null (" .join(',', $fields) .") VALUES ('" .join("','", $values) ."')")
+  or Notice('Error: 0x000c');
 
 
 // update snatch
+
 $updates = [];
 
-$updates[] = "uploaded = uploaded + " . max(0, $upTraffic); // ensure traffic gt 0
-$updates[] = "downloaded = downloaded + " . max(0, $downTraffic);
-$updates[] = ($seeder && !$downTraffic) ? "seedtime = seedtime + $timeTraffic" : "leechtime = leechtime + $timeTraffic";
+// check if timeTrafffic == 0
+if ($timeTraffic > 0) {
+  $updates[] = "uploaded = uploaded + " . max(0, $upTraffic); // ensure traffic gt 0
+  $updates[] = "downloaded = downloaded + " . max(0, $downTraffic);
+  $updates[] = ($seeder && !$downTraffic) ? "seedtime = seedtime + $timeTraffic" : "leechtime = leechtime + $timeTraffic";
+}
 
 if ($info['event'] == 'completed') {
   $updates[] = "finish_times = finish_times + 1";
   $updates[] = "finishdat = '$dt'";
 }
-$sqlLink->query("UPDATE tracker_snatch SET " .join(',', $updates) ." WHERE id=$snatch[id]")
-  or Notice('Error: 0x1009');
+if (count($updates) > 0) {
+  $sqlLink->query("UPDATE tracker_snatch SET " .join(',', $updates) ." WHERE id=$snatch[id]")
+    or Notice('Error: 0x1009');
+}
 
 
 // update torrent
@@ -485,7 +493,7 @@ if ($seeder) {
   // TODO: use torrent 'tag' field
   if ($torrent['diff_action_day'] > 100)
     $sqlLink->query("INSERT INTO sitelog (added, txt, security_level) VALUES('$dt', 'Torrent $torrent[id] added BUMP tag. The seeder (User $user[id]) exists after $torrent[diff_action_day] days.', 'mod')")
-      or Notice('Error: 0x000c');
+      or Notice('Error: 0x000d');
 }
 
 
