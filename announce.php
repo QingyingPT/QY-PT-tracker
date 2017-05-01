@@ -217,7 +217,7 @@ if ($info['left'] == 0) {
 $self = null;
 $res = $sqlLink->query("SELECT $peerFields FROM tracker_peers WHERE torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id = '$peerid' LIMIT 0,1")
   or Notice('Error: 0x0005');
-$self = $res ? $res->fetch_assoc() : false;
+$self = $res ? $res->fetch_assoc() : null;
 
 // validate interval time
 
@@ -320,12 +320,14 @@ if ($self) {
     "seeder = '$seeder'",
   ];
 
+  if ($info['event'] == 'started')
+    $updates[] = "startdat = '$dt'";
+
   if (!$errHandle)
     $updates[] = "prev_action = '$dt'";
 
   $where = "torrent = '$torrent[id]' AND userid = '$user[id]' AND peer_id = '$peerid'";
 
-  // TODO: if re-add torrent ?
   if ($info['event'] == 'completed') { // complete: update seeder status
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1002');
@@ -333,7 +335,7 @@ if ($self) {
     // TODO: check if time is 0
     $sqlLink->query("DELETE FROM tracker_peers WHERE $where")
       or Notice('Error: 0x2001');
-  } else {
+  } else { // start or continue: update peer status
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1003');
   }
@@ -343,7 +345,7 @@ if ($self) {
     Notice('Error: 0x1003');
   }
 } else {
-  // TODO
+  // TODO: if not find 'started' event, log it
   $fields = [
     'torrent',
     'userid',
@@ -385,12 +387,17 @@ if ($self) {
 }
 
 // calculate upload and download traffic and time <-- report
-$upReport = $info['uploaded'] - $self['uploaded'];
-$downReport = $info['downloaded'] - $self['downloaded'];
-// TODO: if < 0, report abnormality
-$upTraffic = $self ? max(0, $upReport) : $info['uploaded'];
-$downTraffic = $self ? max(0, $downReport) : $info['downloaded'];
-$timeTraffic = $self ? max(TIMENOW - $self['last_action'], 0) : 0;
+// NOTE: if traffic lt 0, guess peer should be reset
+// TODO: if traffic lt 0, check reset or log anormaly
+if (!$self || $info['event'] == 'started') { // ignore old peer
+  $upTraffic = $info['uploaded'];
+  $downTraffic = $info['downloaded'];
+  $timeTraffic = 0;
+} else {
+  $upTraffic = $info['uploaded'] - $self['uploaded'];
+  $downTraffic = $info['downloaded'] - $self['downloaded'];
+  $timeTraffic = max(TIMENOW - $self['last_action'], 0);
+}
 
 if ($downTraffic || $upTraffic) {
   $fields = [
@@ -448,8 +455,8 @@ if ($downTraffic || $upTraffic) {
 // update snatch
 $updates = [];
 
-$updates[] = "uploaded = uploaded + $upTraffic";
-$updates[] = "downloaded = downloaded + $downTraffic";
+$updates[] = "uploaded = uploaded + " . max(0, $upTraffic); // ensure traffic gt 0
+$updates[] = "downloaded = downloaded + " . max(0, $downTraffic);
 $updates[] = ($seeder && !$downTraffic) ? "seedtime = seedtime + $timeTraffic" : "leechtime = leechtime + $timeTraffic";
 
 if ($info['event'] == 'completed') {
