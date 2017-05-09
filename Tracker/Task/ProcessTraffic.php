@@ -176,7 +176,7 @@ class ProcessTraffic extends SQL {
     $users = [];
     $conditions = [];
     // TODO: weight the torrent size, the number of seeders, the day or night, the torrent age, etc.
-    while($row = $res->fetch_row()) {
+    while($row = $res->fetch_assoc()) {
       $torrent = $row['torrent'];
       $userid = $row['userid'];
       $conditions[] = "(torrent=$torrent AND userid=$userid)";
@@ -194,7 +194,7 @@ class ProcessTraffic extends SQL {
     $where .= " AND $condition";
     $this->sql->query("UPDATE tracker_traffic_null SET is_old = true WHERE $where");
 
-    print("process " . $this->sql->affected_rows . " traffic\n");
+    print("process " . $this->sql->affected_rows . " rows traffic\n");
 
     $updates = [];
     if ($seed) {
