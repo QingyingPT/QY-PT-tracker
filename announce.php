@@ -230,9 +230,9 @@ $res = $sqlLink->query("SELECT COUNT(*) FROM tracker_peers WHERE torrent = '$tor
   or Notice('Error: 0x0006');
 $num = $res ? $res->fetch_row()[0] : 0;
 if ($num > 0 && !$seeder)
-  Notice('Please wait 30 minutes.');
+  Notice('Waiting for cleaning redundant peers.');
 if ($num > 2 && $seeder)
-  Notice('Please seed the same torrent from < 4 locations.');
+  Notice('Please seed the same torrent from less than 4 locations.');
 
 // basic info
 
