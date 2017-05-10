@@ -86,7 +86,7 @@ class ProcessTraffic extends SQL {
   }
 
   static private function formulaTime($chunk, $weight) {
-    return round($chunk * $weght);
+    return round($chunk * $weight);
   }
 
   static private function formulaTraffic($up, $dl, $n) {
