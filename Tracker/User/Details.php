@@ -41,7 +41,7 @@ class Details extends SQL {
       $row = $res->fetch_assoc();
       $up = $row['up'] / 1024 / 1024 / 1024;
       $info['up'] = round($up, 2);
-      $info['hp'] = round($row['bonus']);
+      $info['hp'] = $row['bonus'];
       $info['time'] = $row['seed'];
 
       $res = $this->sql->query("SELECT COUNT(*),SUM(seeder) FROM tracker_peers WHERE id='$uid'")
