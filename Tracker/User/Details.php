@@ -4,7 +4,7 @@ use Tracker\SQL;
 
 class Details extends SQL {
   private static $fields = [
-    'simple' => 'id,username,email,class,avatars,seedbonus,donor,noad,parked,leechwarn,status',
+    'simple' => 'id,username,email,class,avatar,seedbonus,donor,noad,parked,leechwarn,status',
   ];
 
   private static $cachePrefix = 'user_detail_';
