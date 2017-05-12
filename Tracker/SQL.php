@@ -11,7 +11,7 @@ class SQL {
     $this->sql = $mysql_link;
   }
 
-  function throwSQLError($err) {
+  function throwSQLError($err = '') {
     throw new \RuntimeException($err . "\n SQL Error [" . $this->sql->errno . "]: " . $this->sql->error);
   }
 
