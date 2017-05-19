@@ -199,7 +199,7 @@ class ProcessTraffic extends SQL {
     $updates = [];
     if ($seed) {
       foreach ($users as $id => $time) {
-        $updates[] = [$id, $time, static::formulaTime($time / $seedTimeChunk, 10)];
+        $updates[] = [$id, $time, static::formulaTime($time / $seedTimeChunk, 73)];
       }
 
       $this->sql->query(static::genBatchUpdateSql(
