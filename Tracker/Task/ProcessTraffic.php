@@ -85,8 +85,11 @@ class ProcessTraffic extends SQL {
     }
   }
 
-  static private function formulaTime($chunk, $weight) {
-    return round($chunk * $weight);
+  static private function formulaTime($chunk, $n, $weight) {
+    if ($n < 10) {
+      return round($chunk * $weight * $n);
+    }
+    return round($chunk * $weight * (4.6 + 2 * pow($n * log($n / 6), 0.6)));
   }
 
   static private function formulaTraffic($up, $dl, $n) {
@@ -157,16 +160,19 @@ class ProcessTraffic extends SQL {
     $seedTimeChunk = Config::$seedTimeChunk;
     $dt = esc(date('Y-m-d H:i:s', TIMENOW - $annInterval * 5));
     $where = implode(' AND ', [
-      "is_old = false",
-      "seeder = " . $seed ? 'true' : 'false',
-      "during > 0", // without init traffic
-      "during <= " . $annInterval * 2, // without timeout traffic
-      "last_action <= '$dt'",
+      "t.is_old = false",
+      "t.seeder = " . $seed ? 'true' : 'false',
+      "t.during > 0", // without init traffic
+      "t.during <= " . $annInterval * 2, // without timeout traffic
+      "t.last_action <= '$dt'",
     ]);
 
-    $res = $this->sql->query("SELECT torrent, userid, SUM(during) AS t FROM tracker_traffic_null WHERE $where"
-      . " GROUP BY torrent, userid"
-      . " HAVING SUM(during) > '" . ($seed ? $seedTimeChunk : $annInterval) . "'"
+    $res = $this->sql->query("SELECT t.torrent as torrent, t.userid as userid, SUM(t.during) AS t, (tor.size / 1073741824) AS size"
+      . " FROM tracker_traffic_null AS t"
+      . " LEFT JOIN torrents AS tor ON tor.id = t.torrent"
+      . " WHERE $where"
+      . " GROUP BY t.torrent, t.userid"
+      . " HAVING SUM(t.during) > '" . ($seed ? $seedTimeChunk : $annInterval) . "'"
     );
 
     if (!$res) {
@@ -174,8 +180,9 @@ class ProcessTraffic extends SQL {
     }
 
     $users = [];
+    $counts = [];
     $conditions = [];
-    // TODO: weight the torrent size, the number of seeders, the day or night, the torrent age, etc.
+    // TODO: weight the number of seeders, the day or night, the torrent age, etc.
     while($row = $res->fetch_assoc()) {
       $torrent = $row['torrent'];
       $userid = $row['userid'];
@@ -183,9 +190,16 @@ class ProcessTraffic extends SQL {
 
       if (!isset($users[$userid])) {
         $users[$userid] = 0;
+        $counts[$userid] = 0;
       }
       // TODO: remove default value
-      $users[$userid] += $row['t'];
+      if ($seed) {
+        // weight seed time
+        $users[$userid] += $row['t'] * sqrt(1 + $row['size']);
+        $counts[$userid] += 1;
+      } else {
+        $users[$userid] += $row['t'];
+      }
     }
 
     if (count($conditions) == 0) return;
@@ -199,7 +213,8 @@ class ProcessTraffic extends SQL {
     $updates = [];
     if ($seed) {
       foreach ($users as $id => $time) {
-        $updates[] = [$id, $time, static::formulaTime($time / $seedTimeChunk, 73)];
+        $num = $counts[$id] ?: 1; // error ?
+        $updates[] = [$id, $time, static::formulaTime($time / $seedTimeChunk, $num, 63)];
       }
 
       $this->sql->query(static::genBatchUpdateSql(
