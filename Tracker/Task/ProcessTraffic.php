@@ -205,6 +205,7 @@ class ProcessTraffic extends SQL {
     if (count($conditions) == 0) return;
 
     $condition = implode(' OR ', $conditions);
+    $where = str_replace('t.', '', $where);
     $where .= " AND $condition";
     $this->sql->query("UPDATE tracker_traffic_null SET is_old = true WHERE $where");
 
