@@ -36,15 +36,15 @@ class Details extends SQL {
     if (!$info = $Cache->get_value($cacheKey)) {
       $info = [];
 
-      $res = $this->sql->query("SELECT bonus,(up-dl) as up,seed FROM tracker_bonus WHERE id='$uid'")
+      $res = $this->sql->query("SELECT bonus,up,dl,seed FROM tracker_bonus WHERE id='$uid'")
         or $this->throwSQLError();
       $row = $res->fetch_assoc();
-      $up = $row['up'] / 1024 / 1024 / 1024;
+      $up = ($row['up'] - $row['dl']) / 1024 / 1024 / 1024;
       $info['up'] = round($up, 2);
       $info['hp'] = $row['bonus'];
       $info['time'] = $row['seed'];
 
-      $res = $this->sql->query("SELECT COUNT(*),SUM(seeder) FROM tracker_peers WHERE id='$uid'")
+      $res = $this->sql->query("SELECT COUNT(*),SUM(seeder) FROM tracker_peers WHERE userid='$uid'")
         or $this->throwSQLError();
       $row = $res->fetch_row();
       $info['seed'] = $row[1] ?: 0;
