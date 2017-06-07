@@ -61,7 +61,7 @@ $type = isset($_REQUEST['type']) ? $_REQUEST['type'] : 'snatch';
 
 $migrate = new Migrate();
 
-if ($type == 'snatch') {
+if (false && $type == 'snatch') {
   $key = $migrate->snatchToV2($user['id']);
   if ($key) {
     print json_encode([
@@ -74,7 +74,7 @@ if ($type == 'snatch') {
     trigger_error('404', E_USER_ERROR);
     exit();
   }
-} elseif ($type == 'bonus') {
+} elseif (false && $type == 'bonus') {
   print json_encode(['result' => $migrate->initBonus($user)]);
   exit();
 }
