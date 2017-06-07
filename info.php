@@ -2,6 +2,8 @@
 require_once 'autoload.php';
 
 use Tracker\User\Details as UserDetails;
+use Tracker\Task\UpdatePeers as UpdatePeersTask;
+use Tracker\Config as Config;
 
 require 'include/bittorrent_announce.php';
 require 'shutdown.php';
@@ -26,6 +28,9 @@ $data = null;
 if ($info == 'user' && $type) {
   $d = new UserDetails();
   $data = $d->getUserInfo($user['id'], $type, true);
+} elseif ($info == 'tracker' && $type == 'clean') {
+  $t = new UpdatePeersTask();
+  $data = $t->cleanOldPeers(Config::$annInterval * 5, $user['id']);
 } elseif ($info == 'tracker') {
   $d = new UserDetails();
   $data = $d->getTrackerInfo($user['id']);
