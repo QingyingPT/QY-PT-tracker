@@ -94,7 +94,7 @@ class ProcessTraffic extends SQL {
 
   static private function formulaTraffic($up, $dl, $n) {
     // TODO: bonus formula
-    return round(100 * ($up - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n))));
+    return round(100 * ($up / 6.2175 - $dl) / 1073741824 * (1 + 1 / log10(max(10, $n))));
   }
 
   // TODO: migrate to Tracker\Traffic
