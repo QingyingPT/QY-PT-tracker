@@ -7,5 +7,5 @@ class Config {
 
   public static $peerReserve = 86400; // TODO: check SQL server load
 
-  public static $seedTimeChunk = 86400 * 3; // TODO: check
+  public static $seedTimeChunk = 86400; // TODO: check
 }
