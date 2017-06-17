@@ -62,7 +62,6 @@ class Details extends SQL {
     // TODO:
     // compatible old version
     $count = $Cache->get_value("user_${id}_unread_message_count");
-    return $count ?: 0;
-    return 1;
+    return $count ? intval($count) : 0;
   }
 }
