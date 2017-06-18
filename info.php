@@ -37,6 +37,9 @@ if ($info == 'user' && $type) {
 } elseif ($info == 'unread') {
   $d = new UserDetails();
   $data = $d->getUnreadCount($user['id']);
+} elseif ($info == 'sign' && $type == 'view') {
+  $d = new UserDetails();
+  $data = $d->getSigninInfo($user['id']);
 }
 
 print json_encode($data);

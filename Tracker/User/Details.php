@@ -64,4 +64,11 @@ class Details extends SQL {
     $count = $Cache->get_value("user_${id}_unread_message_count");
     return $count ? intval($count) : 0;
   }
+
+  public function getSigninInfo($id) {
+    $res = $this->sql->query("SELECT last_signin as l, total_days as tt FROM signin_bonus WHERE userid='$uid'")
+      or $this->throwSQLError();
+    $row = $res->fetch_assoc();
+    return $row ?: [ 't' = 0 ];
+  }
 }
