@@ -66,9 +66,9 @@ class Details extends SQL {
   }
 
   public function getSigninInfo($id) {
-    $res = $this->sql->query("SELECT last_signin as l, total_days as tt FROM signin_bonus WHERE id='$id'")
+    $res = $this->sql->query("SELECT (TO_DAYS(CURRENT_TIMESTAMP) - TO_DAYS(last_signin)) as l, total_days as t FROM signin_bonus WHERE id='$id'")
       or $this->throwSQLError();
     $row = $res->fetch_assoc();
-    return $row ?: [ 't' => 0 ];
+    return $row ?: [ 'l' => -1, 't' => 0 ];
   }
 }
