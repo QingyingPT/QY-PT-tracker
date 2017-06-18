@@ -66,7 +66,7 @@ class Details extends SQL {
   }
 
   public function getSigninInfo($id) {
-    $res = $this->sql->query("SELECT last_signin as l, total_days as tt FROM signin_bonus WHERE id='$uid'")
+    $res = $this->sql->query("SELECT last_signin as l, total_days as tt FROM signin_bonus WHERE id='$id'")
       or $this->throwSQLError();
     $row = $res->fetch_assoc();
     return $row ?: [ 't' => 0 ];
