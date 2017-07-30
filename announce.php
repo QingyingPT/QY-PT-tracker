@@ -197,7 +197,7 @@ if (!$globalPromotionState = $Cache->get_value('tracker_global_promotion_state')
 
   $globalPromotionState = $row ? $row[0] : 1;
 
-  $Cache->cache_value('tracker_global_promotion_state');
+  $Cache->cache_value('tracker_global_promotion_state', $globalPromotionState, 1805);
 }
 
 
