@@ -191,7 +191,7 @@ if ($torrent['banned'] == 'yes' && $user['class'] < $seebanned_class && $torrent
 
 // get global promotion state
 if (!$globalPromotionState = $Cache->get_value('tracker_global_promotion_state')) {
-  $res = $sqlLink->query("SELECT * FROM torrent_state LIMIT 1")
+  $res = $sqlLink->query("SELECT * FROM torrents_state LIMIT 1")
     or Notice('Error: 0x0004');
   $row = $res->fetch_row();
 
