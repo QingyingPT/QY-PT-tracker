@@ -13,6 +13,32 @@ $errHandle = null;
 
 $delay = 4; // avoid too slow
 
+/**
+ * old torrent's promotion state
+ *
+ *   0: none
+ *   1: normal
+ *   2: free
+ *   3: 2x
+ *   4: 2x free
+ *   5: half
+ *   6: 2x half
+ *   7: 30%
+ * 
+ * It Wlll Be Deprecated In Next Update !
+ */
+
+$SP_MAP = [
+  '0' => 1,
+  '1' => 1,
+  '2' => 0.1,
+  '3' => 1,
+  '4' => 0.1,
+  '5' => 0.5,
+  '6' => 0.5,
+  '7' => 0.3,
+];
+
 function Notice($err) {
   // TODO:
   benc_resp_raw('d' .benc_str('failure reason') .benc_str($err) .'e');
@@ -144,7 +170,7 @@ if ($clicheck_res || !$client_familyid) {
 // validate torrent
 // get torrent info
 // TODO
-if (1 || !$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) {
+if (!$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) {
   $res = $sqlLink->query("SELECT id, owner, sp_state, seeders, leechers, UNIX_TIMESTAMP(added) AS added, banned, timestampdiff(DAY, last_action, NOW()) as diff_action_day FROM torrents WHERE info_hash = '$infohash' LIMIT 0,1")
     or Notice('Error: 0x0004');
   $row = $res->fetch_assoc();
@@ -161,6 +187,18 @@ $torrent = $row;
 // validate torrent priviledge
 if ($torrent['banned'] == 'yes' && $user['class'] < $seebanned_class && $torrent['owner'] != $user['id'])
   Notice('Torrent banned!');
+
+
+// get global promotion state
+if (!$globalPromotionState = $Cache->get_value('tracker_global_promotion_state')) {
+  $res = $sqlLink->query("SELECT * FROM torrent_state LIMIT 1")
+    or Notice('Error: 0x0004');
+  $row = $res->fetch_row();
+
+  $globalPromotionState = $row ? $row[0] : 1;
+
+  $Cache->cache_value('tracker_global_promotion_state');
+}
 
 
 // validate torrent-user info
@@ -232,7 +270,7 @@ $num = $res ? $res->fetch_row()[0] : 0;
 if ($num > 0 && !$seeder)
   Notice('Waiting for cleaning redundant peers.');
 if ($num > 2 && $seeder)
-  Notice('Please seed the same torrent from less than 4 locations.');
+  Notice('Please seed the same torrent from less than 4 locations.(请手动清除冗余做种)');
 
 // basic info
 
@@ -421,7 +459,7 @@ if ($downTraffic || $upTraffic) {
     $info['port'],
     $timeTraffic,
     $upTraffic,
-    $downTraffic,
+    $downTraffic * $SP_MAP[$globalPromotionState == '1' ? $torrent['sp_state'] : $globalPromotionState], // calculate torrent's promotion state
     $upTraffic,
     $downTraffic,
     $seeder,
