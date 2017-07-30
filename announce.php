@@ -435,8 +435,6 @@ if ($downTraffic || $upTraffic) {
 $fields = [
   'torrent',
   'userid',
-  'peer_id',
-  'port',
   'during',
   'seeder',
 ];
@@ -444,8 +442,6 @@ $fields = [
 $values = [
   $torrent['id'],
   $user['id'],
-  $peerid,
-  $info['port'],
   $timeTraffic,
   $seeder,
 ];
