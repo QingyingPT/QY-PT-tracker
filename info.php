@@ -30,7 +30,7 @@ if ($info == 'user' && $type) {
   $data = $d->getUserInfo($user['id'], $type, true);
 } elseif ($info == 'tracker' && $type == 'clean') {
   $t = new UpdatePeersTask();
-  $data = $t->cleanOldPeers(Config::$annInterval * 5, $user['id']);
+  $data = $t->cleanOldPeers(Config::$annInterval * 3, $user['id']);
 } elseif ($info == 'tracker') {
   $d = new UserDetails();
   $data = $d->getTrackerInfo($user['id']);
