@@ -9,9 +9,11 @@ require 'shutdown.php';
 require 'login.php';
 
 function getParam($name) {
-  return isset($_REQUEST[$name])
-    ? $_REQUEST[$name]
-    : '';
+  return $_REQUEST[$name] ?? '';
+}
+
+function calcRatio($n) {
+  return min(15000000000 / $n, 1) * 4;
 }
 
 $user = login();
@@ -66,4 +68,51 @@ if ($method == 'query') {
     'sum' => $updateResult['sum'],
   ]);
   exit();
+} else if ($method == 'exchange') {
+  $n = 0 + intval(getParam('n'));
+  $heal = getParam('heal');
+
+  if ($n < 100) {
+    trigger_error('Can\' less than 100', E_USER_ERROR);
+    exit();
+  }
+
+  $b = new Bonus();
+
+  if ($heal) {
+    if (!$totalBonus = $Cache->get_value("tracker-total-bonus")) {
+      $totalBonus = $b->getTotalBonus();
+      $Cache->cache_value("tracker-total-bonus", $totalBonus, 1801);
+    }
+    // $totalHP = $b->getTotalHP();
+
+    $ratio = calcRatio($totalBonus);
+
+    $myBonus = $b->getBonus($user['id']);
+
+    $bonusCost = ceil($n * $ratio);
+
+    if ($bonusCost > $myBonus) {
+      $result = ['n' => 0, 'cost' => 0];
+    } else {
+      $b->updateBonus($user['id'], -$bonusCost);
+      $b->updateHP($user['id'], $n);
+      $result = ['n' => $n, 'cost' => $bonusCost];
+    }
+  } else {
+    $myHP = $b->getHP($user['id']);
+    $hpCost = ceil($n / 1.414);
+
+    if ($hpCost > $myHP) {
+      $result = ['n' => 0, 'cost' => 0];
+    } else {
+      $b->updateHP($user['id'], -$hpCost);
+      $b->updateBonus($user['id'], $n);
+      $result = ['n' => $n, 'cost' => $hpCost];
+    }
+  }
+
+  print json_encode($result);
+  exit();
 }
+

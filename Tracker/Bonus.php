@@ -22,7 +22,7 @@ class Bonus extends SQL {
     return array_sum($traffics);
   }
 
-  function updateUserSeedBonus($userid, &$traffics) {
+  public function updateUserSeedBonus($userid, &$traffics) {
     // TODO: use intermediate to dynamic bonus
     $sum = static::sumTrafficTime($traffics);
     $bonus = static::seedTime2BonusFormula($sum);
@@ -47,4 +47,49 @@ class Bonus extends SQL {
     ];
     return 0;
   }
+
+  public function getTotalBonus() {
+    $row = $this->select("SELECT FLOOR(SUM(seedbonus)) as sum FROM users WHERE status='confirmed' AND enabled = 'yes'", [
+      'single' => true,
+    ]);
+
+    return $row['sum'];
+  }
+
+  public function getTotalHP() {
+    $row = $this->select("SELECT SUM(bonus) as sum FROM tracker_bonus", [
+      'single' => true,
+    ]);
+
+    return $row['sum'];
+  }
+
+  public function getBonus($userid) {
+    $row = $this->select("SELECT FLOOR(seedbonus) as bonus FROM users WHERE id='$userid'", [
+      'single' => true,
+    ]);
+
+    return $row['bonus'];
+  }
+
+  public function getHP($userid) {
+    $row = $this->select("SELECT bonus FROM tracker_bonus WHERE id = '$userid'", [
+      'single' => true,
+    ]);
+
+    return $row['bonus'];
+  }
+
+  public function updateBonus($userid, $bonus) {
+    $this->update("UPDATE users SET seedbonus=seedbonus+($bonus) WHERE id='$userid'");
+
+    return $bonus;
+  }
+
+  public function updateHP($userid, $bonus) {
+    $this->update("UPDATE tracker_bonus SET bonus=bonus+($bonus) WHERE id='$userid'");
+
+    return $bonus;
+  }
 }
+
