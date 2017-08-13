@@ -28,7 +28,7 @@ class Bonus extends SQL {
     $bonus = static::seedTime2BonusFormula($sum);
 
     if ($bonus > 0) {
-      $this->sql->query("UPDATE tracker_bonus SET bonus=bonus+$bonus WHERE id='$userid'");
+      $this->sql->query("UPDATE tracker_bonus SET bonus=add_bonus(bonus,$bonus) WHERE id='$userid'");
 
       if ($this->sql->error) {
         return $this->sql->error;

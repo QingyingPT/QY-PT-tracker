@@ -143,12 +143,12 @@ class ProcessTraffic extends SQL {
         [
           'up=up+VALUES(up)',
           'dl=dl+VALUES(dl)',
-          'bonus=bonus+VALUES(bonus)',
+          'bonus=add_bonus(bonus,VALUES(bonus))',
         ]
       ));
 
       if ($this->sql->affected_rows > 0) {
-        print "UPDATE " . $this->sql->affected_rows . " users' traffic\n";
+        print "UPDATE " . $this->sql->affected_rows . " users' traffic adn bonus\n";
       } else {
         $this->throwSQLError('Update user bonus ERROR');
       }
@@ -222,7 +222,7 @@ class ProcessTraffic extends SQL {
         'tracker_bonus',
         ['id', 'seed', 'bonus'],
         $updates,
-        ["seed=seed+VALUES(seed)", "bonus=bonus+VALUES(bonus)"]
+        ["seed=seed+VALUES(seed)", "bonus=add_bonus(bonus,VALUES(bonus))"]
       ));
 
       print("UPDATE " . $this->sql->affected_rows . " users' seedtime");
