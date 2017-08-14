@@ -144,7 +144,7 @@ if (!$row = $Cache->get_value('tracker_userbonus_' .$info['passkey'] .'_content'
 }
 
 if (!$seeder && $row['bonus'] < 0) {
-  $errHandle = function () { Notice('You run out of HP.'); };
+  $errHandle = function () { Notice('You run out of HP.(HP耗尽)'); };
 
   if ($info['uploaded'] == 0 && $info['downloaded'] == 0) {
     $errHandle();
@@ -176,7 +176,7 @@ if (!$row = $Cache->get_value('tracker_hash_' .$info['hash'] .'_content')) {
   $row = $res->fetch_assoc();
   if (!$row) {
     // TODO: record invalid hashinfo
-    Notice('Torrent not exists');
+    Notice('Torrent not exists.(种子未出现)');
   }
 
   $Cache->cache_value('tracker_hash_' .$info['hash'] .'_content', $row, 1870);
@@ -186,7 +186,7 @@ $torrent = $row;
 
 // validate torrent priviledge
 if ($torrent['banned'] == 'yes' && $user['class'] < $seebanned_class && $torrent['owner'] != $user['id'])
-  Notice('Torrent banned!');
+  Notice('Torrent banned!(种子被禁止)');
 
 
 // get global promotion state
@@ -210,7 +210,7 @@ if (!$row = $Cache->get_value("tracker_snatch_$torrent[id]_$user[id]_content")) 
   $row = $res->fetch_assoc();
   if (!$row) {
     // TODO: record invaild key
-    Notice('Invalid key! Please re-download .torrent file.');
+    Notice('Invalid key! Please re-download .torrent file.(请重新下载 .torrent 文件)');
   }
 
   $Cache->cache_value("tracker_snatch_$torrent[id]_$user[id]_content", $row, 2017);
@@ -260,7 +260,7 @@ $self = $res ? $res->fetch_assoc() : null;
 // validate interval time
 
 if ($self && $self['prev_action'] > (TIMENOW - $annInterval + $delay)) {
-  $errHandle = $errHandle ? : function () use ($annInterval) { Notice("There is a minimum announce time of $annInterval seconds"); };
+  $errHandle = $errHandle ? : function () use ($annInterval) { Notice("There is a minimum announce time of $annInterval seconds.(服务器已收到请求，请等待)"); };
 }
 
 // validate leech and seed limit
@@ -268,8 +268,8 @@ $res = $sqlLink->query("SELECT COUNT(*) FROM tracker_peers WHERE torrent = '$tor
   or Notice('Error: 0x0006');
 $num = $res ? $res->fetch_row()[0] : 0;
 if ($num > 0 && !$seeder)
-  Notice('Waiting for cleaning redundant peers.');
-if ($num > 2 && $seeder)
+  Notice('Waiting for cleaning redundant peers.(请手动清除冗余做种)');
+if ($num > 5 && $seeder)
   Notice('Please seed the same torrent from less than 4 locations.(请手动清除冗余做种)');
 
 // basic info

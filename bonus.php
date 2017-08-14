@@ -13,7 +13,7 @@ function getParam($name) {
 }
 
 function calcRatio($n) {
-  return min(15000000000 / $n, 1) * 4;
+  return pow(8, max(1, 20000000000 / $n)) / 2;
 }
 
 $user = login();
