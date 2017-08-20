@@ -57,7 +57,7 @@ class Migrate extends SQL {
   }
 }
 
-$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : 'snatch';
+$type = $_REQUEST['type'] ?? 'snatch';
 
 $migrate = new Migrate();
 

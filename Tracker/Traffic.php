@@ -9,7 +9,7 @@ class Traffic extends SQL {
     $whereSet = [];
 
     $stt = 0 + intval($stt);
-    $end = (0 + intval($end)) ? : ($stt + self::DefaultTimeGap);
+    $end = (0 + intval($end)) ?: ($stt + self::DefaultTimeGap);
 
     if (!$userid || !$stt || ($stt > $end) || ($end - $stt > self::DefaultTimeGap)) {
       return null; // error: too much data

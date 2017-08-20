@@ -12,7 +12,7 @@ class Task extends SQL {
       print("\n$info ...\n");
       $timeStart = microtime(true);
 
-      $result = $func() ? : 'DONE';
+      $result = $func() ?: 'DONE';
 
       $this->sql->query("UPDATE tracker_schedule SET last_action = CURRENT_TIMESTAMP WHERE name = '$name'")
         or $this->throwSQLError('UPDATE Error');

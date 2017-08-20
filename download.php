@@ -23,9 +23,9 @@ function E404($err = 'Not Found') {
 }
 
 
-$id = isset($_GET['id']) ? (0 + intval($_GET['id'])) : 0;
-$hash = isset($_GET['hash']) ? $_GET['hash'] : '';
-$passkey = isset($_GET['passkey']) ? $_GET['passkey'] : '';
+$id = 0 + intval($_GET['id'] ?? 0);
+$hash = $_GET['hash'] ?? '';
+$passkey = $_GET['passkey'] ?? '';
 if (!$hash || !$id) {
   E403('Invalid URL parameters');
 }

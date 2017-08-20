@@ -25,7 +25,7 @@ if ($user == false) {
 
 $torrent = 0 + intval(getParam('torrent'));
 
-$method = getParam('method') ? : 'query';
+$method = getParam('method') ?: 'query';
 
 $yesterday = strtotime('-1 day');
 $lastMonth = $yesterday - Traffic::DefaultTimeGap;

@@ -15,8 +15,8 @@ function login() {
     || empty($_COOKIE['c_secure_login'])
   ) return false;
 
+  $pass = $_COOKIE['c_secure_pass'] ?? '';
   $id = 0 + intval(isset($_COOKIE['c_secure_uid']) ? base64_decode($_COOKIE['c_secure_uid']) : 0);
-  $pass = isset($_COOKIE['c_secure_pass']) ? $_COOKIE['c_secure_pass'] : '';
   $login = isset($_COOKIE['c_secure_login']) ? base64_decode($_COOKIE['c_secure_login']) : '';
 
   if ($id <= 0 || strlen($pass) != 32) return false;
@@ -28,7 +28,7 @@ function login() {
   if (!$row) return false;
 
   if ($login == 'yeah') {
-    if ($pass != md5($row['passhash']) . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0')) return false;
+    if ($pass != md5($row['passhash']) . ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')) return false;
   } else {
     // TODO: fix bug
     if ($pass != md5($row['passhash'])) return false;

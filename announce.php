@@ -46,7 +46,7 @@ function Notice($err) {
 }
 
 function getParam($name) {
-  return isset($_GET[$name]) ? $_GET[$name] : null;
+  return $_GET[$name] ?? null;
 };
 
 function hashPad($hash) {
@@ -59,7 +59,7 @@ function esc($str) {
 }
 
 $info = [
-  'event' => getParam('event') ? : '',
+  'event' => getParam('event') ?: '',
 
   'port' => intval(getParam('port')),
   'left' => intval(getParam('left')),
@@ -75,7 +75,7 @@ $info = [
   'noPeerId' => intval(getParam('no_peer_id')),
 
   'ip' => getip(),
-  'ipv6' => getParam('ipv6') ? : '',
+  'ipv6' => getParam('ipv6') ?: '',
 
   'ts' => time(),
 ];
@@ -260,7 +260,7 @@ $self = $res ? $res->fetch_assoc() : null;
 // validate interval time
 
 if ($self && $self['prev_action'] > (TIMENOW - $annInterval + $delay)) {
-  $errHandle = $errHandle ? : function () use ($annInterval) { Notice("There is a minimum announce time of $annInterval seconds.(服务器已收到请求，请等待)"); };
+  $errHandle = $errHandle ?: function () use ($annInterval) { Notice("There is a minimum announce time of $annInterval seconds.(服务器已收到请求，请等待)"); };
 }
 
 // validate leech and seed limit
@@ -459,7 +459,7 @@ if ($downTraffic || $upTraffic) {
     $info['port'],
     $timeTraffic,
     $upTraffic,
-    $downTraffic * $SP_MAP[$globalPromotionState == '1' ? $torrent['sp_state'] : $globalPromotionState], // calculate torrent's promotion state
+    $downTraffic * $SP_MAP[($globalPromotionState == '1') ? $torrent['sp_state'] : $globalPromotionState], // calculate torrent's promotion state
     $upTraffic,
     $downTraffic,
     $seeder,

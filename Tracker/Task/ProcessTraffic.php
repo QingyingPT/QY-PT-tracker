@@ -161,7 +161,7 @@ class ProcessTraffic extends SQL {
     $dt = esc(date('Y-m-d H:i:s', TIMENOW - $annInterval * 5));
     $where = implode(' AND ', [
       "t.is_old = false",
-      "t.seeder = " . $seed ? 'true' : 'false',
+      "t.seeder = " . ($seed ? 'true' : 'false'),
       "t.during > 0", // without init traffic
       "t.during <= " . $annInterval * 2, // without timeout traffic
       "t.last_action <= '$dt'",
