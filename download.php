@@ -22,13 +22,17 @@ function E404($err = 'Not Found') {
   exit();
 }
 
+function getParam($name) {
+  return $_REQUEST[$name] ?? '';
+}
 
-$id = 0 + intval($_GET['id'] ?? 0);
-$hash = $_GET['hash'] ?? '';
-$passkey = $_GET['passkey'] ?? '';
+$id = 0 + intval(getParam('id'));
+$hash = getParam('hash');
+$passkey = getParam('passkey');
 if (!$hash || !$id) {
   E403('Invalid URL parameters');
 }
+$reset = !!getParam('reset');
 
 $sqlLink = get_mysql_link();
 
@@ -123,8 +127,12 @@ $sqlLink->query("UPDATE torrents SET hits = hits + 1 WHERE id = '$id'")
 $res = $sqlLink->query("SELECT * FROM tracker_snatch WHERE torrent = '$torrent[id]' AND userid = '$user[id]'")
   or Notice('SQL error 3');
 
+function createDownloadKey($user, $torrent) {
+  return md5($user['passhash'] .$user['id'] .$torrent['id'] .date('c') .rand());
+}
+
 if ($res->num_rows == 0) {
-  $key = md5($user['passhash'] .$user['id'] .$torrent['id'] .date('c') .rand());
+  $key = createDownloadKey($user, $torrent);
   $sqlLink->query("INSERT INTO tracker_snatch (torrent, userid, downloadkey, finishdat) VALUES ('$torrent[id]', '$user[id]', '$key', 0)")
     or Notice('SQL error 4');
 } else if ($res->num_rows > 1) {
@@ -133,9 +141,15 @@ if ($res->num_rows == 0) {
     or Notice('SQL error 5');
 } else {
   $row = $res->fetch_assoc();
-  $key = $row['downloadkey'];
-  $sqlLink->query("UPDATE tracker_snatch SET last_action = NOW() WHERE torrent = '$torrent[id]' AND userid = '$user[id]'")
-    or Notice('SQL error 6');
+  if ($reset) {
+  $key = createDownloadKey($user, $torrent);
+    $sqlLink->query("UPDATE tracker_snatch SET last_action = NOW(), downloadkey = '$key' WHERE torrent = '$torrent[id]' AND userid = '$user[id]'")
+      or Notice('SQL error 6');
+  } else {
+    $key = $row['downloadkey'];
+    $sqlLink->query("UPDATE tracker_snatch SET last_action = NOW() WHERE torrent = '$torrent[id]' AND userid = '$user[id]'")
+      or Notice('SQL error 6');
+  }
 }
 
 // bencode
