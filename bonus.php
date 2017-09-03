@@ -2,6 +2,7 @@
 require_once 'autoload.php';
 
 use Tracker\Bonus;
+use Tracker\User\Details as UserDetails;
 use Tracker\Traffic;
 
 require 'include/bittorrent_announce.php';
@@ -111,6 +112,9 @@ if ($method == 'query') {
       $result = ['n' => $n, 'cost' => $hpCost];
     }
   }
+
+  $d = new UserDetails();
+  $d->getTrackerInfo($user['id'], true);
 
   print json_encode($result);
   exit();
