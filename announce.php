@@ -24,7 +24,7 @@ $delay = 4; // avoid too slow
  *   5: half
  *   6: 2x half
  *   7: 30%
- * 
+ *
  * It Wlll Be Deprecated In Next Update !
  */
 
@@ -459,9 +459,9 @@ if ($downTraffic || $upTraffic) {
     $info['port'],
     $timeTraffic,
     $upTraffic,
-    $downTraffic * $SP_MAP[($globalPromotionState == '1') ? $torrent['sp_state'] : $globalPromotionState], // calculate torrent's promotion state
-    $upTraffic,
     $downTraffic,
+    $upTraffic,
+    $downTraffic * ($SP_MAP[($globalPromotionState == '1') ? $torrent['sp_state'] : $globalPromotionState]), // calculate torrent's promotion state
     $seeder,
   ];
 
