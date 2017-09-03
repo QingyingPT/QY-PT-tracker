@@ -71,7 +71,7 @@ $info = [
   'compact' => intval(getParam('compact')),
   'downloadkey' => getParam('downloadkey'),
   'passkey' => getParam('passkey'),
-  'infohash' => preg_replace('/ *$/s', '', getParam('info_hash')),
+  'infohash' => getParam('info_hash'),
   'noPeerId' => intval(getParam('no_peer_id')),
 
   'ip' => getip(),
