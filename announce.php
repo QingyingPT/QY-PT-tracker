@@ -461,7 +461,7 @@ if ($downTraffic || $upTraffic) {
     $upTraffic,
     $downTraffic,
     $upTraffic,
-    $downTraffic * ($SP_MAP[($globalPromotionState == '1') ? $torrent['sp_state'] : $globalPromotionState]), // calculate torrent's promotion state
+    $downTraffic,
     $seeder,
   ];
 
