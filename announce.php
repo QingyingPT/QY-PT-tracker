@@ -369,7 +369,7 @@ if ($self) {
   if ($info['event'] == 'completed') { // complete: update seeder status
     $sqlLink->query("UPDATE tracker_peers SET " .join(',', $updates) ." WHERE $where")
       or Notice('Error: 0x1002');
-  } elseif ($info['event'] == 'stoped') { // stop: delete peer
+  } elseif ($info['event'] == 'stopped') { // stop: delete peer
     // TODO: check if time is 0
     $sqlLink->query("DELETE FROM tracker_peers WHERE $where")
       or Notice('Error: 0x2001');
