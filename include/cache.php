@@ -1,21 +1,13 @@
 <?php
-// CACHE class (Based on file From ProjectGazelle)
 // See: https://github.com/WhatCD/Gazelle/blob/master/classes/cache.class.php
 
-class CACHE extends Memcache{
+class CACHE extends Memcached {
 	private $cacheReadTimes = 0;
 	private $cacheWriteTimes = 0;
   private $keyHits = [
     'read' => [],
     'write' => [],
   ];
-
-	function __construct($host = 'localhost', $port = 11211) {
-		$success = $this->connect($host, $port); // Connect to memcache
-		if (!$success) {
-      throw new RuntimeException('Can\'t connact to Memcached');
-		}
-	}
 
 	function lock($Key){
 		$this->cache_value('lock_'.$Key, 'true', 3600);
@@ -30,7 +22,7 @@ class CACHE extends Memcache{
   }
 	
 	function cache_value($Key, $Value, $Duration = 3600){
-		$this->set($Key, $Value, 0, $Duration);
+		$this->set($Key, $Value, $Duration);
 
 		$this->cacheWriteTimes++;
 		$this->keyHits['write'][$Key] = !isset($this->keyHits['write'][$Key]) ? 1 : $this->keyHits['write'][$Key] + 1;
